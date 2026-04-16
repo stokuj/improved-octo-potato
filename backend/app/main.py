@@ -8,6 +8,7 @@ from app.auth.router import router as auth_router
 from app.config.db import create_db
 from app.config.exceptions import register_exception_handlers
 from app.items.router import router as items_router
+from app.profiles.router import router as profiles_router
 from app.users.router import router as users_router
 
 
@@ -31,5 +32,6 @@ app.add_middleware(
 register_exception_handlers(app)
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(profiles_router)
 app.include_router(items_router)
 setup_admin(app)

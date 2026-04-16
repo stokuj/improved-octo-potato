@@ -1,7 +1,8 @@
 from collections.abc import AsyncGenerator, Generator
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.config.settings import settings
 
@@ -10,11 +11,16 @@ ASYNC_DATABASE_URL = settings.async_database_url
 
 engine = create_engine(DATABASE_URL, echo=settings.sql_echo)
 async_engine = create_async_engine(ASYNC_DATABASE_URL, echo=settings.sql_echo)
-async_session_maker = async_sessionmaker(async_engine, expire_on_commit=False)
+async_session_maker = async_sessionmaker(
+    async_engine,
+    expire_on_commit=False,
+    class_=AsyncSession,
+)
 
 
 def create_db() -> None:
     from app.items import models as items_models  # noqa: F401
+    from app.profiles import models as profiles_models  # noqa: F401
     from app.users import models as users_models  # noqa: F401
 
     SQLModel.metadata.create_all(engine)
