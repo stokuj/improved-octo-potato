@@ -1,26 +1,37 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session, select
 
 from app.config.db import get_session
 from app.config.exceptions import NotFoundError
-from app.items.models import Item
-from app.items.schemas import ItemCreate, ItemRead, ItemUpdate
+from app.items.models import Item, ItemCategory, ItemGrade
+from app.items.schemas import ItemListItem, ItemRead
 
 router = APIRouter(prefix="/items", tags=["items"])
 
 
-@router.post("/", response_model=ItemRead)
-def create_item(item_in: ItemCreate, session: Session = Depends(get_session)) -> Item:
-    item = Item(**item_in.model_dump())
-    session.add(item)
-    session.commit()
-    session.refresh(item)
-    return item
+@router.get("/", response_model=list[ItemListItem])
+def read_items(
+    category: ItemCategory | None = Query(default=None),
+    grade: ItemGrade | None = Query(default=None),
+    session: Session = Depends(get_session),
+) -> list[ItemListItem]:
+    statement = select(Item)
+    if category is not None:
+        statement = statement.where(Item.category == category)
+    if grade is not None:
+        statement = statement.where(Item.grade == grade)
 
-
-@router.get("/", response_model=list[ItemRead])
-def read_items(session: Session = Depends(get_session)) -> list[Item]:
-    return session.exec(select(Item)).all()
+    rows = session.exec(statement.order_by(Item.name)).all()
+    return [
+        ItemListItem(
+            id=row.id,
+            name=row.name,
+            category=row.category,
+            grade=row.grade,
+            current_price=row.current_price,
+        )
+        for row in rows
+    ]
 
 
 @router.get("/{item_id}", response_model=ItemRead)
@@ -28,32 +39,12 @@ def read_item(item_id: int, session: Session = Depends(get_session)) -> Item:
     item = session.get(Item, item_id)
     if not item:
         raise NotFoundError()
-    return item
-
-
-@router.patch("/{item_id}", response_model=ItemRead)
-def update_item(
-    item_id: int, item_in: ItemUpdate, session: Session = Depends(get_session)
-) -> Item:
-    item = session.get(Item, item_id)
-    if not item:
-        raise NotFoundError()
-
-    updates = item_in.model_dump(exclude_unset=True)
-    for field, value in updates.items():
-        setattr(item, field, value)
-
-    session.add(item)
-    session.commit()
-    session.refresh(item)
-    return item
-
-
-@router.delete("/{item_id}", status_code=204)
-def delete_item(item_id: int, session: Session = Depends(get_session)) -> None:
-    item = session.get(Item, item_id)
-    if not item:
-        raise NotFoundError()
-
-    session.delete(item)
-    session.commit()
+    return ItemRead(
+        id=item.id,
+        name=item.name,
+        category=item.category,
+        grade=item.grade,
+        current_price=item.current_price,
+        created_at=item.created_at,
+        updated_at=item.updated_at,
+    )

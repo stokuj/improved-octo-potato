@@ -1,19 +1,28 @@
-from typing import Optional
+from datetime import datetime
 
 from pydantic import BaseModel
 
-
-class ItemCreate(BaseModel):
-    name: str
-    description: Optional[str] = None
+from app.items.models import ItemCategory, ItemGrade
 
 
 class ItemRead(BaseModel):
     id: int
     name: str
-    description: Optional[str] = None
+    category: ItemCategory
+    grade: ItemGrade
+    current_price: int | None = None
+    created_at: datetime
+    updated_at: datetime
 
 
-class ItemUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+class ItemListItem(BaseModel):
+    id: int
+    name: str
+    category: ItemCategory
+    grade: ItemGrade
+    current_price: int | None = None
+
+
+class ItemFilter(BaseModel):
+    category: ItemCategory | None = None
+    grade: ItemGrade | None = None

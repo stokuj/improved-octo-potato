@@ -20,7 +20,9 @@ async_session_maker = async_sessionmaker(
 
 def create_db() -> None:
     from app.items import models as items_models  # noqa: F401
+    from app.prices import models as prices_models  # noqa: F401
     from app.profiles import models as profiles_models  # noqa: F401
+    from app.user_items import models as user_items_models  # noqa: F401
     from app.users import models as users_models  # noqa: F401
 
     SQLModel.metadata.create_all(engine)
