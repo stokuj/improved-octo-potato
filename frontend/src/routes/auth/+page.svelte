@@ -1,7 +1,7 @@
 <script>
     import { login, register, user } from '$lib/auth.svelte.js';
 
-    let activeTab = $state('login'); // 'login' lub 'register'
+    let activeTab = $state('login'); // 'login' or 'register'
     let email = $state('');
     let password = $state('');
     let errorMessage = $state('');
@@ -25,23 +25,23 @@
 <div class="flex justify-center items-center py-10 min-h-[60vh]">
     <div class="card bg-base-100 w-full max-w-md shadow-2xl border border-base-300">
         <div class="card-body">
-            <!-- Tabs do przełączania -->
+            <!-- Tab switcher -->
             <div role="tablist" class="tabs tabs-boxed mb-8 p-1">
                 <button 
                     role="tab" 
                     class="tab transition-all {activeTab === 'login' ? 'tab-active font-bold text-white' : ''}" 
-                    onclick={() => { activeTab = 'login'; errorMessage = ''; }}>Logowanie</button>
+                    onclick={() => { activeTab = 'login'; errorMessage = ''; }}>Login</button>
                 <button 
                     role="tab" 
                     class="tab transition-all {activeTab === 'register' ? 'tab-active font-bold text-white' : ''}" 
-                    onclick={() => { activeTab = 'register'; errorMessage = ''; }}>Rejestracja</button>
+                    onclick={() => { activeTab = 'register'; errorMessage = ''; }}>Register</button>
             </div>
 
             <h2 class="card-title text-3xl font-extrabold text-primary mb-2">
-                {activeTab === 'login' ? 'Witaj ponownie!' : 'Stwórz nowe konto'}
+                {activeTab === 'login' ? 'Welcome Back!' : 'Create New Account'}
             </h2>
             <p class="text-base-content/60 mb-6">
-                {activeTab === 'login' ? 'Zaloguj się, aby kontynuować.' : 'Wypełnij dane, aby zacząć korzystać z AA Tracker.'}
+                {activeTab === 'login' ? 'Sign in to continue.' : 'Fill in your details to start using AA Tracker.'}
             </p>
 
             {#if errorMessage}
@@ -56,7 +56,7 @@
                     <label class="label"><span class="label-text font-semibold">Email</span></label>
                     <input 
                         type="email" 
-                        placeholder="twoj@email.com" 
+                        placeholder="your@email.com" 
                         class="input input-bordered focus:input-primary" 
                         bind:value={email}
                         required 
@@ -64,7 +64,7 @@
                 </div>
 
                 <div class="form-control">
-                    <label class="label"><span class="label-text font-semibold">Hasło</span></label>
+                    <label class="label"><span class="label-text font-semibold">Password</span></label>
                     <input 
                         type="password" 
                         placeholder="••••••••" 
@@ -78,11 +78,11 @@
                     {#if isLoading}
                         <span class="loading loading-spinner"></span>
                     {/if}
-                    {activeTab === 'login' ? 'Zaloguj się' : 'Zarejestruj się'}
+                    {activeTab === 'login' ? 'Sign In' : 'Register'}
                 </button>
             </form>
 
-            <div class="divider text-xs text-base-content/40 mt-8 uppercase tracking-widest">Lub kontynuuj przez</div>
+            <div class="divider text-xs text-base-content/40 mt-8 uppercase tracking-widest">Or continue with</div>
 
             <div class="grid grid-cols-2 gap-4">
                 <button class="btn btn-outline btn-sm gap-2 opacity-60 hover:opacity-100">

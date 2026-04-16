@@ -8,7 +8,7 @@
     let message = $state({ text: '', type: '' }); // type: 'success' | 'error'
     let isSaving = $state(false);
 
-    // Synchronizacja danych z profilu gdy zostaną załadowane
+    // Sync data from profile when loaded
     $effect(() => {
         if (user.profile) {
             display_name = user.profile.display_name || '';
@@ -16,7 +16,7 @@
         }
     });
 
-    // Przekierowanie jeśli nie zalogowany
+    // Redirect if not logged in
     $effect(() => {
         if (!user.loading && !user.isLoggedIn) {
             goto('/auth');
@@ -34,13 +34,13 @@
         });
 
         if (result.success) {
-            message = { text: 'Profil został pomyślnie zaktualizowany!', type: 'success' };
+            message = { text: 'Profile successfully updated!', type: 'success' };
         } else {
             message = { text: result.message, type: 'error' };
         }
         isSaving = false;
         
-        // Ukryj komunikat po 4 sekundach
+        // Hide message after 4 seconds
         setTimeout(() => { message = { text: '', type: '' }; }, 4000);
     }
 </script>
@@ -52,11 +52,11 @@
             <form onsubmit={handleSave} class="flex flex-col gap-6">
                 
                 <div class="space-y-5">
-                    <h2 class="text-xl font-bold border-b border-base-200 pb-2">Dane podstawowe</h2>
+                    <h2 class="text-xl font-bold border-b border-base-200 pb-2">Basic Information</h2>
                     
                     <div class="form-control w-full">
                         <label class="label">
-                            <span class="label-text font-semibold text-base-content/70">Adres Email</span>
+                            <span class="label-text font-semibold text-base-content/70">Email Address</span>
                         </label>
                         <input 
                             type="email" 
@@ -67,18 +67,18 @@
                         <label class="label">
                             <span class="label-text-alt text-base-content/50 flex items-center gap-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd" /></svg>
-                                Adresu e-mail nie można zmienić.
+                                Email address cannot be changed.
                             </span>
                         </label>
                     </div>
 
                     <div class="form-control w-full">
                         <label class="label">
-                            <span class="label-text font-semibold">Nazwa wyświetlana</span>
+                            <span class="label-text font-semibold">Display Name</span>
                         </label>
                         <input 
                             type="text" 
-                            placeholder="Np. Gromowładny" 
+                            placeholder="e.g. Stormbringer" 
                             class="input input-bordered w-full focus:input-primary transition-colors" 
                             bind:value={display_name}
                         />
@@ -86,7 +86,7 @@
                 </div>
 
                 <div class="mt-4">
-                    <h2 class="text-xl font-bold border-b border-base-200 pb-2 mb-4">Prywatność</h2>
+                    <h2 class="text-xl font-bold border-b border-base-200 pb-2 mb-4">Privacy</h2>
                     
                     <div class="form-control bg-base-100 border border-base-300 rounded-xl p-5 hover:border-primary/40 transition-colors shadow-sm">
                         <label class="cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -96,10 +96,10 @@
                                       <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
                                       <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
-                                    Profil prywatny
+                                    Private Profile
                                 </span> 
                                 <p class="text-sm text-base-content/60 mt-1">
-                                    Ukryj swoje statystyki i przedmioty przed innymi użytkownikami.
+                                    Hide your stats and items from other users.
                                 </p>
                             </div>
                             <input type="checkbox" class="toggle toggle-primary toggle-lg" bind:checked={is_private} />
@@ -113,7 +113,7 @@
                         {#if isSaving}
                             <span class="loading loading-spinner loading-sm"></span>
                         {/if}
-                        {isSaving ? 'Zapisywanie...' : 'Zapisz zmiany'}
+                        {isSaving ? 'Saving...' : 'Save Changes'}
                     </button>
                 </div>
             </form>
@@ -137,7 +137,6 @@
 </div>
 
 <style>
-    /* Opcjonalna, prosta animacja dla alertu (Tailwind v3.x nie ma wbudowanego fade-in) */
     .animate-fade-in {
         animation: fadeIn 0.3s ease-out forwards;
     }

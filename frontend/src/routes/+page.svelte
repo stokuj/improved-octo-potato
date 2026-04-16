@@ -12,11 +12,11 @@
 			<div class="max-w-2xl">
 				<h1 class="text-6xl font-black text-primary tracking-tighter">AA Tracker <span class="text-base-content">Svelte</span></h1>
 				<p class="py-6 text-xl text-base-content/70 font-medium">
-					Najszybszy tracker cen przedmiotów z <span class="text-secondary font-bold">Item House</span>. Monitoruj rynek, śledź zmiany i optymalizuj swój ekwipunek.
+					The fastest item price tracker from <span class="text-secondary font-bold">Item House</span>. Monitor the market, track changes, and optimize your inventory.
 				</p>
 				<div class="flex gap-4 justify-center">
-                    <a href="/items" class="btn btn-primary btn-lg shadow-xl hover:scale-105 transition-all">Przeglądaj Rynek</a>
-                    <a href="/auth" class="btn btn-outline btn-lg hover:scale-105 transition-all">Dołącz do nas</a>
+                    <a href="/items" class="btn btn-primary btn-lg shadow-xl hover:scale-105 transition-all">Browse Market</a>
+                    <a href="/auth" class="btn btn-outline btn-lg hover:scale-105 transition-all">Join Us</a>
                 </div>
 			</div>
 		</div>
@@ -25,8 +25,8 @@
 	<!-- Market Overview -->
 	<section class="space-y-4">
         <div class="flex justify-between items-center px-2">
-			<h2 class="text-2xl font-black uppercase tracking-widest opacity-80">Gorące Oferty</h2>
-            <a href="/items" class="link link-primary no-underline font-bold text-sm">Zobacz wszystkie &rarr;</a>
+			<h2 class="text-2xl font-black uppercase tracking-widest opacity-80">Hot Deals</h2>
+            <a href="/items" class="link link-primary no-underline font-bold text-sm">See all &rarr;</a>
         </div>
         
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -35,13 +35,13 @@
                     <div class="card-body p-6">
                         <div class="flex justify-between items-start">
                             <h3 class="card-title text-primary">{item.name}</h3>
-                            <div class="badge badge-success badge-sm font-bold">OKAZJA</div>
+                            <div class="badge badge-success badge-sm font-bold">BARGAIN</div>
                         </div>
                         <p class="text-sm opacity-60 italic">{item.description}</p>
                         <div class="divider my-1 opacity-20"></div>
                         <div class="flex justify-between items-end">
-                            <div class="text-2xl font-black text-secondary">{item.price.toLocaleString()} <span class="text-xs font-normal opacity-50">sreb.</span></div>
-                            <button class="btn btn-xs btn-primary btn-outline">Śledź</button>
+                            <div class="text-2xl font-black text-secondary">{item.price.toLocaleString()} <span class="text-xs font-normal opacity-50">silver</span></div>
+                            <button class="btn btn-xs btn-primary btn-outline">Track</button>
                         </div>
                     </div>
                 </div>

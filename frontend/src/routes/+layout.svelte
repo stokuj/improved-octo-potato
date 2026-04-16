@@ -26,8 +26,8 @@
 		</div>
 		<div class="flex-none">
 			<ul class="menu menu-horizontal px-1 gap-2 items-center">
-				<li><a href="/items" class="hover:bg-primary/10">Przedmioty</a></li>
-				<li><a href="/my-items" class="hover:bg-primary/10 font-medium">Mój Ekwipunek</a></li>
+				<li><a href="/items" class="hover:bg-primary/10">Items</a></li>
+				<li><a href="/saved-items" class="hover:bg-primary/10 font-medium">Saved Items</a></li>
 				
 				<div class="divider divider-horizontal mx-1"></div>
 
@@ -42,13 +42,13 @@
 						</div>
 						<ul tabindex="0" class="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52">
 							<li class="px-4 py-2 font-bold text-xs opacity-50">{user.data?.email}</li>
-							<li><a href="/settings">Ustawienia</a></li>
-							<li><button onclick={logout} class="text-error border-t border-base-200 mt-2 pt-2">Wyloguj się</button></li>
+							<li><a href="/settings">Settings</a></li>
+							<li><button onclick={logout} class="text-error border-t border-base-200 mt-2 pt-2">Sign Out</button></li>
 						</ul>
 					</div>
 				{:else}
 					<li>
-						<a href="/auth" class="btn btn-primary btn-sm ml-2"> Zaloguj się </a>
+						<a href="/auth" class="btn btn-primary btn-sm ml-2"> Sign In </a>
 					</li>
 				{/if}
 			</ul>
@@ -70,11 +70,11 @@
 	<footer class="footer footer-center p-6 bg-base-300 text-base-content">
 		<aside>
 			<p class="font-bold">AA Tracker Prototype</p> 
-			<p>Copyright © {new Date().getFullYear()} - Wszelkie prawa zastrzeżone</p>
+			<p>Copyright © {new Date().getFullYear()} - All rights reserved</p>
 		</aside> 
 		<nav class="grid-flow-col gap-4">
-			<a href="/about" class="link link-hover">O nas</a>
-			<a href="/#" class="link link-hover">Kontakt</a>
+			<a href="/about" class="link link-hover">About</a>
+			<a href="/#" class="link link-hover">Contact</a>
 			<a href="https://github.com" class="link link-hover" target="_blank">GitHub</a>
 		</nav>
 	</footer>
