@@ -1,0 +1,24 @@
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from app.admin import setup_admin
+from app.auth.router import router as auth_router
+from app.config.db import create_db
+from app.config.exceptions import register_exception_handlers
+from app.items.router import router as items_router
+from app.users.router import router as users_router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_db()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
+register_exception_handlers(app)
+app.include_router(auth_router)
+app.include_router(users_router)
+app.include_router(items_router)
+setup_admin(app)
