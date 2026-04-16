@@ -21,6 +21,14 @@ class ItemListItem(BaseModel):
     category: ItemCategory
     grade: ItemGrade
     current_price: int | None = None
+    updated_at: datetime
+
+
+class PaginatedItems(BaseModel):
+    items: list[ItemListItem]
+    total: int
+    offset: int
+    limit: int
 
 
 class ItemFilter(BaseModel):

@@ -53,8 +53,9 @@
 
             <form onsubmit={handleSubmit} class="space-y-4">
                 <div class="form-control">
-                    <label class="label"><span class="label-text font-semibold">Email</span></label>
+                    <label class="label" for="email"><span class="label-text font-semibold">Email</span></label>
                     <input 
+                        id="email"
                         type="email" 
                         placeholder="your@email.com" 
                         class="input input-bordered focus:input-primary" 
@@ -64,8 +65,9 @@
                 </div>
 
                 <div class="form-control">
-                    <label class="label"><span class="label-text font-semibold">Password</span></label>
+                    <label class="label" for="password"><span class="label-text font-semibold">Password</span></label>
                     <input 
+                        id="password"
                         type="password" 
                         placeholder="••••••••" 
                         class="input input-bordered focus:input-primary" 

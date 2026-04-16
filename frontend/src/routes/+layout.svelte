@@ -27,20 +27,20 @@
 		<div class="flex-none">
 			<ul class="menu menu-horizontal px-1 gap-2 items-center">
 				<li><a href="/items" class="hover:bg-primary/10">Items</a></li>
-				<li><a href="/saved-items" class="hover:bg-primary/10 font-medium">Saved Items</a></li>
 				
-				<div class="divider divider-horizontal mx-1"></div>
-
 				{#if user.loading}
+					<div class="divider divider-horizontal mx-1"></div>
 					<span class="loading loading-spinner loading-sm text-primary"></span>
 				{:else if user.isLoggedIn}
+					<li><a href="/saved-items" class="hover:bg-primary/10 font-medium">Saved Items</a></li>
+					<div class="divider divider-horizontal mx-1"></div>
 					<div class="dropdown dropdown-end">
 						<div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar placeholder">
 							<div class="bg-primary text-primary-content rounded-full w-10">
 								<span>{user.data?.email?.[0].toUpperCase()}</span>
 							</div>
 						</div>
-						<ul tabindex="0" class="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52">
+						<ul class="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52">
 							<li class="px-4 py-2 font-bold text-xs opacity-50">{user.data?.email}</li>
 							<li><a href="/settings">Settings</a></li>
 							<li><button onclick={logout} class="text-error border-t border-base-200 mt-2 pt-2">Sign Out</button></li>

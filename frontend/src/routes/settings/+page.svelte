@@ -55,16 +55,17 @@
                     <h2 class="text-xl font-bold border-b border-base-200 pb-2">Basic Information</h2>
                     
                     <div class="form-control w-full">
-                        <label class="label">
+                        <label class="label" for="email">
                             <span class="label-text font-semibold text-base-content/70">Email Address</span>
                         </label>
                         <input 
+                            id="email"
                             type="email" 
                             value={user.data?.email} 
                             class="input input-bordered w-full bg-base-200/50 text-base-content/60 cursor-not-allowed" 
                             disabled 
                         />
-                        <label class="label">
+                        <label class="label" for="email">
                             <span class="label-text-alt text-base-content/50 flex items-center gap-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd" /></svg>
                                 Email address cannot be changed.
@@ -73,10 +74,11 @@
                     </div>
 
                     <div class="form-control w-full">
-                        <label class="label">
+                        <label class="label" for="display_name">
                             <span class="label-text font-semibold">Display Name</span>
                         </label>
                         <input 
+                            id="display_name"
                             type="text" 
                             placeholder="e.g. Stormbringer" 
                             class="input input-bordered w-full focus:input-primary transition-colors" 
