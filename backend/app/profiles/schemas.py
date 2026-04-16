@@ -11,7 +11,6 @@ class ProfileRead(BaseModel):
     user_id: uuid.UUID
     is_private: bool
     display_name: str | None = None
-    bio: str | None = None
     avatar_url: str | None = None
     created_at: datetime
     updated_at: datetime
@@ -20,5 +19,4 @@ class ProfileRead(BaseModel):
 class ProfileUpdate(BaseModel):
     is_private: bool | None = None
     display_name: str | None = None
-    bio: str | None = None
     avatar_url: str | None = None

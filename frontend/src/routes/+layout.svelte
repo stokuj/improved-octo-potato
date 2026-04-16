@@ -27,8 +27,7 @@
 		<div class="flex-none">
 			<ul class="menu menu-horizontal px-1 gap-2 items-center">
 				<li><a href="/items" class="hover:bg-primary/10">Przedmioty</a></li>
-				<li><a href="/categories" class="hover:bg-primary/10">Kategorie</a></li>
-				<li><a href="/about" class="hover:bg-primary/10">O nas</a></li>
+				<li><a href="/my-items" class="hover:bg-primary/10 font-medium">Mój Ekwipunek</a></li>
 				
 				<div class="divider divider-horizontal mx-1"></div>
 
@@ -43,8 +42,8 @@
 						</div>
 						<ul tabindex="0" class="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52">
 							<li class="px-4 py-2 font-bold text-xs opacity-50">{user.data?.email}</li>
-							<li><a href="/profile">Profil</a></li>
-							<li><button onclick={logout} class="text-error">Wyloguj się</button></li>
+							<li><a href="/settings">Ustawienia</a></li>
+							<li><button onclick={logout} class="text-error border-t border-base-200 mt-2 pt-2">Wyloguj się</button></li>
 						</ul>
 					</div>
 				{:else}

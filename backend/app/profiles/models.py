@@ -13,7 +13,6 @@ class Profile(SQLModel, table=True):
     user_id: uuid.UUID = Field(foreign_key="user.id", unique=True, index=True)
     is_private: bool = True
     display_name: str | None = Field(default=None, max_length=80)
-    bio: str | None = Field(default=None, max_length=500)
     avatar_url: str | None = None
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
