@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="ca2eba90-5a8c-447a-8aa9-6935b3fbfece" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/improved-octo-potato.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/backend/.env.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/pyproject.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/routes/items/[id]/+page.svelte" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/routes/items/[id]/+page.svelte" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/svelte.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/svelte.config.js" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1
+}</component>
+  <component name="ProjectId" id="3CNhwPkGTZBuHu4GOjz56rAaKiX" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "Docker.docker-compose.yml: Compose Deployment.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.main.executor": "Run",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "ai.playground.ignore.import.keys.banner.in.settings": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "main",
+    "junie.onboarding.icon.badge.shown": "true",
+    "last_opened_file_path": "/home/dv6/GitHub/improved-octo-potato",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "to.speed.mode.migration.done": "true",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RunManager">
+    <configuration name="FastAPI Dev" type="UvRunConfigurationType" factoryName="UvRunConfigurationType">
+      <option name="args">
+        <list />
+      </option>
+      <option name="checkSync" value="true" />
+      <option name="env">
+        <map />
+      </option>
+      <option name="runType" value="MODULE" />
+      <option name="scriptOrModule" value="" />
+      <option name="uvArgs">
+        <list>
+          <option value="run" />
+          <option value="fastapi" />
+          <option value="dev" />
+        </list>
+      </option>
+      <option name="uvSdkKey" />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-PY-253.31033.139" />
+        <option value="bundled-python-sdk-2653e85de345-6d6dccd035ac-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.31033.139" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="ca2eba90-5a8c-447a-8aa9-6935b3fbfece" name="Changes" comment="" />
+      <created>1776232174011</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1776232174011</updated>
+      <workItem from="1776232175043" duration="1532000" />
+      <workItem from="1776283343787" duration="904000" />
+      <workItem from="1776420552524" duration="722000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/improved_octo_potato$main.coverage" NAME="main Coverage Results" MODIFIED="1776283914931" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/backend" />
+  </component>
+</project>
