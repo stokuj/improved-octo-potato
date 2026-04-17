@@ -7,10 +7,12 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-    database_url: str = "sqlite:///./app.db"
-    async_database_url: str = "sqlite+aiosqlite:///./app.db"
-    auth_secret: str = Field(...)  # No default, required
-    sql_echo: bool = True
+    database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/app"
+    async_database_url: str = (
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/app"
+    )
+    auth_secret: str = "temporary-development-secret-must-be-32-chars"
+    sql_echo: bool = False
 
     @field_validator("auth_secret")
     @classmethod
