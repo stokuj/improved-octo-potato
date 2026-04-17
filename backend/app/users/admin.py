@@ -5,6 +5,9 @@ from app.users.models import User
 
 class UserAdmin(ModelView, model=User):
     column_list = [
+        User.email,
+    ]
+    column_details_list = [
         User.id,
         User.email,
         User.is_active,

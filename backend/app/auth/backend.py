@@ -6,7 +6,10 @@ from fastapi_users.authentication import (
 
 from app.config.settings import settings
 
-cookie_transport = CookieTransport(cookie_max_age=3600)
+cookie_transport = CookieTransport(
+    cookie_max_age=3600,
+    cookie_secure=settings.cookie_secure,
+)
 
 
 def get_jwt_strategy() -> JWTStrategy:

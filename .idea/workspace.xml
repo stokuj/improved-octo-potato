@@ -7,13 +7,22 @@
     <list default="true" id="ca2eba90-5a8c-447a-8aa9-6935b3fbfece" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/backend/.env.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/backend/Dockerfile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/auth/backend.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/auth/backend.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/auth/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/auth/schemas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/config/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/config/db.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/app/config/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/config/settings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/items/router.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/items/router.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/prices/router.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/prices/router.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/profiles/router.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/profiles/router.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/user_items/router.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/user_items/router.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/users/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/users/admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/users/router.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/users/router.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/pyproject.toml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/uv.lock" beforeDir="false" afterPath="$PROJECT_DIR$/backend/uv.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/routes/items/[id]/+page.svelte" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/routes/items/[id]/+page.svelte" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/svelte.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/svelte.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -146,7 +155,7 @@
       <updated>1776232174011</updated>
       <workItem from="1776232175043" duration="1532000" />
       <workItem from="1776283343787" duration="904000" />
-      <workItem from="1776420552524" duration="3265000" />
+      <workItem from="1776420552524" duration="4534000" />
     </task>
     <servers />
   </component>

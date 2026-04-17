@@ -12,15 +12,15 @@ class Settings(BaseSettings):
         "postgresql+asyncpg://postgres:postgres@localhost:5432/app"
     )
     auth_secret: str = "temporary-development-secret-must-be-32-chars"
+    admin_session_secret: str = "temporary-admin-session-secret-must-be-32-chars"
+    cookie_secure: bool = False
     sql_echo: bool = False
 
-    @field_validator("auth_secret")
+    @field_validator("auth_secret", "admin_session_secret")
     @classmethod
-    def validate_auth_secret(cls, v: str) -> str:
+    def validate_secrets(cls, v: str) -> str:
         if len(v) < 32:
-            raise ValueError("AUTH_SECRET must be at least 32 characters long")
-        if v == "zmien-na-losowy-string":
-            raise ValueError("AUTH_SECRET must be changed from the default value")
+            raise ValueError("Secret must be at least 32 characters long")
         return v
 
 

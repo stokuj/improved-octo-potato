@@ -23,6 +23,7 @@ services:
       - DATABASE_URL=${DATABASE_URL:-postgresql+psycopg://postgres:postgres@db:5432/app}
       - ASYNC_DATABASE_URL=${ASYNC_DATABASE_URL:-postgresql+asyncpg://postgres:postgres@db:5432/app}
       - AUTH_SECRET=${AUTH_SECRET:-temporary-development-secret-must-be-32-chars}
+      - ADMIN_SESSION_SECRET=${ADMIN_SESSION_SECRET:-temporary-admin-session-secret-must-be-32-chars}
       - SQL_ECHO=${SQL_ECHO:-false}
     ports:
       - "${BACKEND_PORT:-8000}:8000"

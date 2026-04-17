@@ -1,7 +1,7 @@
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import SQLModel, create_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.config.settings import settings
@@ -16,21 +16,6 @@ async_session_maker = async_sessionmaker(
     expire_on_commit=False,
     class_=AsyncSession,
 )
-
-
-def create_db() -> None:
-    from app.items import models as items_models  # noqa: F401
-    from app.prices import models as prices_models  # noqa: F401
-    from app.profiles import models as profiles_models  # noqa: F401
-    from app.user_items import models as user_items_models  # noqa: F401
-    from app.users import models as users_models  # noqa: F401
-
-    SQLModel.metadata.create_all(engine)
-
-
-def get_session() -> Generator[Session, None, None]:
-    with Session(engine) as session:
-        yield session
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
