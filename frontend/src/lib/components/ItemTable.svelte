@@ -297,7 +297,9 @@
                 {@const isSaving = savingIds.has(item.id)}
                 <div class="grid grid-cols-12 gap-4 px-4 items-center border-b border-base-100 hover:bg-primary/5 transition-colors group" style="height: {ROW_HEIGHT}px;">
                     <div class="col-span-5 md:col-span-4 flex flex-col min-w-0">
-                        <span class="font-bold text-base truncate group-hover:text-primary transition-colors">{item.name}</span>
+                        <a href={`/items/${item.id}`} class="font-bold text-base truncate group-hover:text-primary hover:text-primary hover:underline transition-colors">
+                            {item.name}
+                        </a>
                         <span class="text-[10px] opacity-40 uppercase font-black">Updated: {formatTime(item.updated_at)}</span>
                     </div>
 
