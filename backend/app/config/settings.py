@@ -1,21 +1,25 @@
-from dataclasses import dataclass
-import os
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-def _as_bool(value: str, default: bool = False) -> bool:
-    if value is None:
-        return default
-    return value.lower() in {"1", "true", "yes", "on"}
-
-
-@dataclass(frozen=True)
-class Settings:
-    database_url: str = os.getenv("DATABASE_URL", "sqlite:///./app.db")
-    async_database_url: str = os.getenv(
-        "ASYNC_DATABASE_URL", "sqlite+aiosqlite:///./app.db"
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
-    auth_secret: str = os.getenv("AUTH_SECRET", "zmien-na-losowy-string")
-    sql_echo: bool = _as_bool(os.getenv("SQL_ECHO"), default=True)
+
+    database_url: str = "sqlite:///./app.db"
+    async_database_url: str = "sqlite+aiosqlite:///./app.db"
+    auth_secret: str = Field(...)  # No default, required
+    sql_echo: bool = True
+
+    @field_validator("auth_secret")
+    @classmethod
+    def validate_auth_secret(cls, v: str) -> str:
+        if len(v) < 32:
+            raise ValueError("AUTH_SECRET must be at least 32 characters long")
+        if v == "zmien-na-losowy-string":
+            raise ValueError("AUTH_SECRET must be changed from the default value")
+        return v
 
 
 settings = Settings()

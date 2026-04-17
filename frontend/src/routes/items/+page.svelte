@@ -1,6 +1,7 @@
 <script>
     import { onMount } from 'svelte';
     import { user } from '$lib/auth.svelte.js';
+    import { API_BASE_URL } from '$lib/config.js';
 
     // State for items and pagination
     let items = $state([]);
@@ -68,7 +69,7 @@
 
         try {
             fetchError = null;
-            const response = await fetch(`http://localhost:8000/items/?${params.toString()}`);
+            const response = await fetch(`${API_BASE_URL}/items/?${params.toString()}`);
             if (response.ok) {
                 const data = await response.json();
                 items = [...items, ...data.items];
