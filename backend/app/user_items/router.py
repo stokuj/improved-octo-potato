@@ -1,40 +1,71 @@
-from fastapi import APIRouter, Depends, Response, status
-from sqlmodel import Session, and_, select
+from fastapi import APIRouter, Depends, Query, Response, status
+from sqlmodel import Session, and_, col, func, select
 
 from app.auth.dependencies import current_user
 from app.config.db import get_session
 from app.config.exceptions import NotFoundError
-from app.items.models import Item
+from app.items.models import Item, ItemCategory, ItemGrade
+from app.items.schemas import ItemListItem, PaginatedItems
 from app.user_items.models import UserItem
-from app.user_items.schemas import UserItemRead
 from app.users.models import User
 
 router = APIRouter(prefix="/user-items", tags=["user-items"])
 
 
-@router.get("/me", response_model=list[UserItemRead])
+@router.get("/me", response_model=PaginatedItems)
 def read_my_followed_items(
+    q: str | None = Query(default=None),
+    category: ItemCategory | None = Query(default=None),
+    grade: ItemGrade | None = Query(default=None),
+    offset: int = 0,
+    limit: int = 20,
     user: User = Depends(current_user),
     session: Session = Depends(get_session),
-) -> list[UserItemRead]:
-    query = (
+) -> PaginatedItems:
+    statement = (
         select(UserItem, Item)
         .join(Item, Item.id == UserItem.item_id)
         .where(UserItem.user_id == user.id)
-        .order_by(UserItem.created_at.desc())
     )
-    rows = session.exec(query).all()
-    return [
-        UserItemRead(
-            item_id=item.id,
+
+    if q is not None:
+        statement = statement.where(col(Item.name).contains(q))
+    if category is not None:
+        statement = statement.where(Item.category == category)
+    if grade is not None:
+        statement = statement.where(Item.grade == grade)
+
+    count_statement = select(func.count()).select_from(statement.subquery())
+    total = session.exec(count_statement).one()
+
+    rows = session.exec(
+        statement.order_by(UserItem.created_at.desc()).offset(offset).limit(limit)
+    ).all()
+
+    items = [
+        ItemListItem(
+            id=item.id,
             name=item.name,
             category=item.category,
             grade=item.grade,
             current_price=item.current_price,
-            followed_at=user_item.created_at,
+            updated_at=item.updated_at,
         )
-        for user_item, item in rows
+        for _, item in rows
     ]
+
+    return PaginatedItems(items=items, total=total, offset=offset, limit=limit)
+
+
+@router.get("/ids", response_model=list[int])
+def read_my_followed_item_ids(
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+) -> list[int]:
+    rows = session.exec(
+        select(UserItem.item_id).where(UserItem.user_id == user.id)
+    ).all()
+    return rows
 
 
 @router.post("/{item_id}", status_code=status.HTTP_201_CREATED)
