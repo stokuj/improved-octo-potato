@@ -1,0 +1,125 @@
+name: backend
+
+on:
+  push:
+    branches: [main, dev, dev-2, dev-3]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: ruff check
+        working-directory: backend
+        run: uv run ruff check .
+
+      - name: ruff format
+        working-directory: backend
+        run: uv run ruff format --check .
+
+  lock-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: verify uv.lock is up to date
+        working-directory: backend
+        run: uv lock --check
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: install dependencies
+        working-directory: backend
+        run: uv sync --frozen
+
+      - name: pytest
+        working-directory: backend
+        run: uv run pytest -v
+
+  alembic:
+    runs-on: ubuntu-latest
+    needs: lint
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_alembic
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: install dependencies
+        working-directory: backend
+        run: uv sync --frozen
+
+      - name: alembic upgrade head
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/app_alembic
+          ASYNC_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/app_alembic
+          AUTH_SECRET: ci-secret-minimum-32-characters-long
+          ADMIN_SESSION_SECRET: ci-admin-secret-minimum-32-chars
+        run: uv run alembic upgrade head
+
+      - name: alembic check (no pending autogenerate)
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/app_alembic
+          ASYNC_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/app_alembic
+          AUTH_SECRET: ci-secret-minimum-32-characters-long
+          ADMIN_SESSION_SECRET: ci-admin-secret-minimum-32-chars
+        run: uv run alembic check
