@@ -3,6 +3,7 @@
     import { goto } from '$app/navigation';
     import { user } from '$lib/auth.svelte.js';
     import { API_BASE_URL } from '$lib/config.js';
+    import { gradeColor } from '$lib/grades.js';
 
     let {
         apiEndpoint = '/items/',
@@ -220,9 +221,9 @@
     });
 
     /** @param {string} grade */
-    function getGradeBadgeClass(grade) {
-        void grade;
-        return 'badge-outline opacity-50 font-medium border-base-content/20';
+    function getGradeBadgeStyle(grade) {
+        const c = gradeColor(grade);
+        return `color: ${c}; border-color: ${c}55;`;
     }
 
     /** @param {string} dateStr */
@@ -308,7 +309,7 @@
                     </div>
 
                     <div class="col-span-3 md:col-span-2 text-center">
-                        <span class="badge {getGradeBadgeClass(item.grade)} badge-sm py-2 px-3 uppercase text-[10px]">{item.grade}</span>
+                        <span class="badge badge-outline badge-sm py-2 px-3 uppercase text-[10px] font-black" style={getGradeBadgeStyle(item.grade)}>{item.grade}</span>
                     </div>
 
                     <div class="col-span-4 md:col-span-2 text-right tabular-nums">

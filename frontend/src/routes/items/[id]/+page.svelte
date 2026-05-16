@@ -2,6 +2,7 @@
     import { onMount } from 'svelte';
     import { page } from '$app/state';
     import { API_BASE_URL } from '$lib/config.js';
+    import { gradeColor } from '$lib/grades.js';
     import EChartsLineChart from '$lib/components/charts/EChartsLineChart.svelte';
     import CraftingTab from '$lib/components/CraftingTab.svelte';
 
@@ -190,8 +191,8 @@
                         <div class="space-y-1">
                             <h1 class="text-2xl font-black tracking-tight">{item.name}</h1>
                             <div class="flex flex-wrap gap-2 pt-1">
-                                <span class="badge badge-ghost badge-xs uppercase font-bold opacity-60 tracking-tighter">{item.category}</span>
-                                <span class="badge badge-outline badge-xs uppercase font-bold opacity-60 tracking-tighter">{item.grade}</span>
+                                <span class="badge badge-ghost badge-xs uppercase font-bold opacity-50 tracking-tighter">{item.category}</span>
+                                <span class="badge badge-outline badge-xs uppercase font-black tracking-tighter" style="color: {gradeColor(item.grade)}; border-color: {gradeColor(item.grade)}55;">{item.grade}</span>
                             </div>
                         </div>
 

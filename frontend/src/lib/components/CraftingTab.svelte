@@ -12,7 +12,7 @@
      * @typedef {{
      *   item_id: number, item_name: string, output_qty: number, multiplier: number,
      *   market_price: number|null, profit_per_craft: number|null, total_material_cost: number,
-     *   ingredients: IngredientNode[]
+     *   has_missing_prices: boolean, ingredients: IngredientNode[]
      * }} CraftResult
      */
 
@@ -120,25 +120,54 @@
             </table>
         </div>
 
+        <!-- Missing price warning -->
+        {#if craftTree.has_missing_prices}
+            <div class="alert alert-warning py-2 text-xs">
+                <span>⚠ Some ingredients have no market price — cost and profit may be incomplete.</span>
+            </div>
+        {/if}
+
         <!-- Summary -->
-        <div class="divider"></div>
+        <div class="divider my-3"></div>
         <div class="flex flex-wrap gap-6 text-sm">
             <div>
-                <div class="opacity-60 text-xs uppercase tracking-wide">Material Cost</div>
-                <div class="font-black text-lg">{craftTree.total_material_cost.toLocaleString()} <span class="text-xs opacity-50">¤</span></div>
+                <div class="opacity-50 text-[10px] uppercase tracking-widest font-black mb-0.5">Material Cost</div>
+                <div class="font-black text-xl tabular-nums">
+                    {craftTree.total_material_cost.toLocaleString()}
+                    <span class="text-xs opacity-40">¤</span>
+                </div>
             </div>
             {#if craftTree.market_price != null}
                 <div>
-                    <div class="opacity-60 text-xs uppercase tracking-wide">Market Price ×{craftTree.output_qty * multiplier}</div>
-                    <div class="font-black text-lg">{(craftTree.market_price * craftTree.output_qty * multiplier).toLocaleString()} <span class="text-xs opacity-50">¤</span></div>
+                    <div class="opacity-50 text-[10px] uppercase tracking-widest font-black mb-0.5">
+                        Market Price ×{craftTree.output_qty * multiplier}
+                    </div>
+                    <div class="font-black text-xl tabular-nums">
+                        {(craftTree.market_price * craftTree.output_qty * multiplier).toLocaleString()}
+                        <span class="text-xs opacity-40">¤</span>
+                    </div>
                 </div>
             {/if}
             {#if craftTree.profit_per_craft != null}
                 <div>
-                    <div class="opacity-60 text-xs uppercase tracking-wide">Profit</div>
-                    <div class="font-black text-lg {craftTree.profit_per_craft >= 0 ? 'text-success' : 'text-error'}">
-                        {craftTree.profit_per_craft >= 0 ? '+' : ''}{craftTree.profit_per_craft.toLocaleString()} <span class="text-xs opacity-50">¤</span>
+                    <div class="opacity-50 text-[10px] uppercase tracking-widest font-black mb-0.5">Profit</div>
+                    <div class="font-black text-xl tabular-nums {craftTree.profit_per_craft >= 0 ? 'text-success' : 'text-error'}">
+                        {craftTree.profit_per_craft >= 0 ? '+' : ''}{craftTree.profit_per_craft.toLocaleString()}
+                        <span class="text-xs opacity-60">¤</span>
                     </div>
+                </div>
+                <div>
+                    <div class="opacity-50 text-[10px] uppercase tracking-widest font-black mb-0.5">Margin</div>
+                    <div class="font-black text-xl {craftTree.profit_per_craft >= 0 ? 'text-success' : 'text-error'}">
+                        {craftTree.market_price != null && craftTree.market_price > 0
+                            ? Math.round((craftTree.profit_per_craft / (craftTree.market_price * craftTree.output_qty * multiplier)) * 100)
+                            : 0}%
+                    </div>
+                </div>
+            {:else if craftTree.has_missing_prices}
+                <div>
+                    <div class="opacity-50 text-[10px] uppercase tracking-widest font-black mb-0.5">Profit</div>
+                    <div class="font-black text-xl opacity-30">N/A</div>
                 </div>
             {/if}
         </div>
