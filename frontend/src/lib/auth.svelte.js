@@ -1,7 +1,7 @@
 import { goto } from '$app/navigation';
 import { API_BASE_URL } from '$lib/config.js';
 
-// Global user state using Svelte 5 runes
+/** @type {{ data: { email: string } | null, profile: { display_name: string | null, is_private: boolean } | null, isLoggedIn: boolean, loading: boolean }} */
 export const user = $state({
     data: null,
     profile: null,
@@ -45,6 +45,7 @@ export async function checkMe() {
     }
 }
 
+/** @param {string} email @param {string} password */
 export async function login(email, password) {
     const formData = new FormData();
     formData.append('username', email);
@@ -66,6 +67,7 @@ export async function login(email, password) {
     }
 }
 
+/** @param {string} email @param {string} password */
 export async function register(email, password) {
     const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
@@ -83,6 +85,7 @@ export async function register(email, password) {
     }
 }
 
+/** @param {{ display_name?: string, is_private?: boolean }} profileData */
 export async function updateProfile(profileData) {
     try {
         const response = await fetch(`${API_URL}/profiles/me`, {

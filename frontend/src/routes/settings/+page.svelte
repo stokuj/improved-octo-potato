@@ -23,6 +23,7 @@
         }
     });
 
+    /** @param {SubmitEvent} e */
     async function handleSave(e) {
         e.preventDefault();
         isSaving = true;

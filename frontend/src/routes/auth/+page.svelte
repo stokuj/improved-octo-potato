@@ -7,6 +7,7 @@
     let errorMessage = $state('');
     let isLoading = $state(false);
 
+    /** @param {SubmitEvent} e */
     async function handleSubmit(e) {
         e.preventDefault();
         isLoading = true;

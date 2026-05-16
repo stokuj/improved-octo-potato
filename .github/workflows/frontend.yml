@@ -27,6 +27,10 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: create env for type check
+        working-directory: frontend
+        run: cp .env.example .env
+
       - name: svelte-check
         working-directory: frontend
         run: npm run check
