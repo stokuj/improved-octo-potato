@@ -1,9 +1,8 @@
-from datetime import datetime, timezone
 from typing import Any
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.profiles.models import Profile
+from app.profiles.models import Profile, utcnow
 from app.profiles.schemas import ProfileUpdate
 
 
@@ -27,7 +26,7 @@ async def update_profile(
     for field, value in updates.items():
         setattr(profile, field, value)
 
-    profile.updated_at = datetime.now(timezone.utc)
+    profile.updated_at = utcnow()
     session.add(profile)
     await session.commit()
     await session.refresh(profile)

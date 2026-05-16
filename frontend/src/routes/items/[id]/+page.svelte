@@ -2,7 +2,9 @@
     import { onMount } from 'svelte';
     import { page } from '$app/state';
     import { API_BASE_URL } from '$lib/config.js';
+    import { gradeColor } from '$lib/grades.js';
     import EChartsLineChart from '$lib/components/charts/EChartsLineChart.svelte';
+    import CraftingTab from '$lib/components/CraftingTab.svelte';
 
     /** @typedef {{ id: number, name: string, category: string, grade: string, current_price: number | null, updated_at: string }} ItemDetail */
     /** @typedef {{ t: string, price: number }} ChartPoint */
@@ -17,6 +19,7 @@
     ];
 
     let selectedRange = $state('30D');
+    let activeTab = $state('price');
 
     /** @type {ItemDetail | null} */
     let item = $state(null);
@@ -188,8 +191,8 @@
                         <div class="space-y-1">
                             <h1 class="text-2xl font-black tracking-tight">{item.name}</h1>
                             <div class="flex flex-wrap gap-2 pt-1">
-                                <span class="badge badge-ghost badge-xs uppercase font-bold opacity-60 tracking-tighter">{item.category}</span>
-                                <span class="badge badge-outline badge-xs uppercase font-bold opacity-60 tracking-tighter">{item.grade}</span>
+                                <span class="badge badge-ghost badge-xs uppercase font-bold opacity-50 tracking-tighter">{item.category}</span>
+                                <span class="badge badge-outline badge-xs uppercase font-black tracking-tighter" style="color: {gradeColor(item.grade)}; border-color: {gradeColor(item.grade)}55;">{item.grade}</span>
                             </div>
                         </div>
 
@@ -244,8 +247,25 @@
                 {/if}
             </div>
 
-            <!-- Right Panel: Chart -->
+            <!-- Right Panel: Chart / Crafting -->
             <div class="lg:col-span-3 space-y-6">
+                <!-- Tab switcher -->
+                <div class="tabs tabs-bordered mb-4">
+                    <button
+                        class="tab {activeTab === 'price' ? 'tab-active' : ''}"
+                        onclick={() => activeTab = 'price'}
+                    >
+                        Price History
+                    </button>
+                    <button
+                        class="tab {activeTab === 'crafting' ? 'tab-active' : ''}"
+                        onclick={() => activeTab = 'crafting'}
+                    >
+                        Crafting
+                    </button>
+                </div>
+
+                {#if activeTab === 'price'}
                 <div class="card bg-base-100 border border-base-200 shadow-sm overflow-hidden h-full">
                     <div class="card-body p-0 gap-0 h-full">
                         <div class="flex items-center justify-between px-6 py-4 border-b border-base-200 bg-base-200/20">
@@ -276,6 +296,15 @@
                         </div>
                     </div>
                 </div>
+                {/if}
+
+                {#if activeTab === 'crafting'}
+                <div class="card bg-base-100 border border-base-200 shadow-sm overflow-hidden">
+                    <div class="card-body p-6">
+                        <CraftingTab item={item} />
+                    </div>
+                </div>
+                {/if}
             </div>
         </div>
     {/if}

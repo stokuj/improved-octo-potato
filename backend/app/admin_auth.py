@@ -1,7 +1,6 @@
 from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
 from sqladmin.authentication import AuthenticationBackend
-from sqlmodel import select
 
 from app.auth.dependencies import get_user_manager, get_user_db
 from app.config.db import async_session_maker

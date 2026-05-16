@@ -1,0 +1,27 @@
+{env.APP_DOMAIN}, {env.APP_WWW_DOMAIN} {
+    # Backend: API routes, admin panel, and API docs
+    handle /api/* {
+        reverse_proxy backend:8000
+    }
+
+    handle /admin* {
+        reverse_proxy backend:8000
+    }
+
+    handle /docs* {
+        reverse_proxy backend:8000
+    }
+
+    handle /redoc {
+        reverse_proxy backend:8000
+    }
+
+    handle /openapi.json {
+        reverse_proxy backend:8000
+    }
+
+    # Frontend: everything else
+    handle {
+        reverse_proxy frontend:3000
+    }
+}

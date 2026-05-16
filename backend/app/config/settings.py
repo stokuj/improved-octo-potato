@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     admin_session_secret: str = "temporary-admin-session-secret-must-be-32-chars"
     cookie_secure: bool = False
     sql_echo: bool = False
+    # Env format: JSON array string, e.g., '["http://localhost:3000"]'
+    # Pydantic-settings automatically parses JSON arrays from env vars
+    cors_origins: list[str] = Field(
+        default=["http://localhost:5173", "http://127.0.0.1:5173"]
+    )
 
     @field_validator("auth_secret", "admin_session_secret")
     @classmethod

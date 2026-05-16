@@ -1,2 +1,26 @@
 @import 'tailwindcss';
 @plugin 'daisyui';
+
+/* ── Grade tier colors (shared across all components) ───────────────────── */
+:root {
+    --grade-grand:     #9ca3af;
+    --grade-rare:      #60a5fa;
+    --grade-arcane:    #34d399;
+    --grade-heroic:    #c084fc;
+    --grade-unique:    #fb923c;
+    --grade-celestial: #fbbf24;
+    --grade-divine:    #f472b6;
+    --grade-epic:      #818cf8;
+    --grade-legendary: #f59e0b;
+    --grade-mythic:    #f87171;
+    --grade-eternal:   #22d3ee;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: oklch(var(--bc) / 0.15); border-radius: 9px; }
+::-webkit-scrollbar-thumb:hover { background: oklch(var(--bc) / 0.3); }
+
+/* ── Tabular numbers for prices ──────────────────────────────────────────── */
+.tabular-nums { font-variant-numeric: tabular-nums; }
