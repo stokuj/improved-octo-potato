@@ -10,8 +10,12 @@ def _email() -> str:
 @pytest.fixture()
 async def auth_client(client: AsyncClient) -> AsyncClient:
     email = _email()
-    await client.post("/api/auth/register", json={"email": email, "password": "password123"})
-    await client.post("/api/auth/login", data={"username": email, "password": "password123"})
+    await client.post(
+        "/api/auth/register", json={"email": email, "password": "password123"}
+    )
+    await client.post(
+        "/api/auth/login", data={"username": email, "password": "password123"}
+    )
     return client
 
 

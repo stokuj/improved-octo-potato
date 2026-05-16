@@ -9,7 +9,11 @@ class Recipe(SQLModel, table=True):
 
 
 class RecipeIngredient(SQLModel, table=True):
-    __table_args__ = (UniqueConstraint("recipe_id", "ingredient_item_id", name="uq_recipe_ingredient"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "recipe_id", "ingredient_item_id", name="uq_recipe_ingredient"
+        ),
+    )
 
     id: int | None = Field(default=None, primary_key=True)
     recipe_id: int = Field(foreign_key="recipe.id", index=True)

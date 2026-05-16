@@ -8,15 +8,28 @@ from app.items.models import Item, ItemCategory, ItemGrade
 
 
 def _make_item(id: int, name: str, price: int | None = 1000) -> Item:
-    return Item(id=id, name=name, category=ItemCategory.OTHER, grade=ItemGrade.GRAND, current_price=price)
+    return Item(
+        id=id,
+        name=name,
+        category=ItemCategory.OTHER,
+        grade=ItemGrade.GRAND,
+        current_price=price,
+    )
 
 
 def _make_recipe(id: int, item_id: int, output_qty: int = 1) -> Recipe:
     return Recipe(id=id, item_id=item_id, output_qty=output_qty)
 
 
-def _make_ing(id: int, recipe_id: int, ingredient_item_id: int, quantity: int) -> RecipeIngredient:
-    return RecipeIngredient(id=id, recipe_id=recipe_id, ingredient_item_id=ingredient_item_id, quantity=quantity)
+def _make_ing(
+    id: int, recipe_id: int, ingredient_item_id: int, quantity: int
+) -> RecipeIngredient:
+    return RecipeIngredient(
+        id=id,
+        recipe_id=recipe_id,
+        ingredient_item_id=ingredient_item_id,
+        quantity=quantity,
+    )
 
 
 def test_basic_single_ingredient():
@@ -33,7 +46,7 @@ def test_basic_single_ingredient():
     assert isinstance(result, CraftResult)
     assert result.item_id == 1
     assert result.total_material_cost == 1000  # 5 * 200
-    assert result.profit_per_craft == 0        # 1000 - 1000
+    assert result.profit_per_craft == 0  # 1000 - 1000
     assert len(result.ingredients) == 1
     assert result.ingredients[0].qty_needed == 5
     assert result.ingredients[0].total_cost == 1000
@@ -52,7 +65,7 @@ def test_multiplier_scales_quantities():
     result = build_craft_tree(1, 3, {}, all_recipes, all_items)
 
     assert result.ingredients[0].qty_needed == 15  # 5 * 3
-    assert result.total_material_cost == 3000       # 15 * 200
+    assert result.total_material_cost == 3000  # 15 * 200
 
 
 def test_inventory_sets_crafts_possible():

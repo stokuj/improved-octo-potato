@@ -23,6 +23,7 @@ class CraftNode(BaseModel):
     crafts_possible: int | None
     ingredients: list["CraftNode"] = []
 
+
 CraftNode.model_rebuild()
 
 

@@ -31,4 +31,7 @@ class RecipeIngredientAdmin(ModelView, model=RecipeIngredient):
         RecipeIngredient.ingredient_item_id,
         RecipeIngredient.quantity,
     ]
-    column_sortable_list = [RecipeIngredient.recipe_id, RecipeIngredient.ingredient_item_id]
+    column_sortable_list = [
+        RecipeIngredient.recipe_id,
+        RecipeIngredient.ingredient_item_id,
+    ]

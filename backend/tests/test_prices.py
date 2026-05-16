@@ -13,7 +13,9 @@ _TEST_URL = os.environ["ASYNC_DATABASE_URL"]
 @pytest.fixture()
 async def db_session():
     engine = create_async_engine(_TEST_URL, poolclass=NullPool)
-    session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    session_maker = async_sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False
+    )
     async with session_maker() as session:
         yield session
     await engine.dispose()
@@ -32,7 +34,9 @@ async def price_item(db_session: AsyncSession) -> Item:
     return item
 
 
-async def test_post_price_point_returns_201(client: AsyncClient, price_item: Item) -> None:
+async def test_post_price_point_returns_201(
+    client: AsyncClient, price_item: Item
+) -> None:
     resp = await client.post(
         f"/api/items/{price_item.id}/prices",
         json={
@@ -61,7 +65,9 @@ async def test_post_price_updates_current_price(
     # Fresh session avoids stale transaction snapshot from price_item fixture session
     engine = create_async_engine(_TEST_URL, poolclass=NullPool)
     try:
-        session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        session_maker = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
         async with session_maker() as verify_session:
             refreshed = await verify_session.get(Item, price_item.id)
             assert refreshed is not None
@@ -102,7 +108,9 @@ async def test_get_price_history_raw(client: AsyncClient, price_item: Item) -> N
     assert data[0]["price"] == 500
 
 
-async def test_get_price_history_1h_buckets(client: AsyncClient, price_item: Item) -> None:
+async def test_get_price_history_1h_buckets(
+    client: AsyncClient, price_item: Item
+) -> None:
     # Two points in the same hour bucket, one in a different hour
     for ts, price in [
         ("2026-03-01T10:05:00Z", 1000),
@@ -130,7 +138,9 @@ async def test_get_price_history_1h_buckets(client: AsyncClient, price_item: Ite
     assert hour11["min_price"] == hour11["max_price"] == hour11["last_price"] == 3000
 
 
-async def test_get_price_history_1d_buckets(client: AsyncClient, price_item: Item) -> None:
+async def test_get_price_history_1d_buckets(
+    client: AsyncClient, price_item: Item
+) -> None:
     for ts, price in [
         ("2026-03-01T08:00:00Z", 100),
         ("2026-03-01T20:00:00Z", 200),
@@ -155,7 +165,9 @@ async def test_get_price_history_1d_buckets(client: AsyncClient, price_item: Ite
     assert day1["last_price"] == 200
 
 
-async def test_get_price_history_date_filter(client: AsyncClient, price_item: Item) -> None:
+async def test_get_price_history_date_filter(
+    client: AsyncClient, price_item: Item
+) -> None:
     for ts, price in [
         ("2026-01-01T00:00:00Z", 111),
         ("2026-06-01T00:00:00Z", 222),

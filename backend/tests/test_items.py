@@ -12,7 +12,9 @@ _TEST_URL = os.environ["ASYNC_DATABASE_URL"]
 @pytest.fixture()
 async def db_session():
     engine = create_async_engine(_TEST_URL, poolclass=NullPool)
-    session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    session_maker = async_sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False
+    )
     async with session_maker() as session:
         yield session
     await engine.dispose()
@@ -41,7 +43,9 @@ async def test_get_items_returns_list(client: AsyncClient, sample_item: Item) ->
     assert data["total"] >= 1
 
 
-async def test_get_items_filter_by_category(client: AsyncClient, sample_item: Item) -> None:
+async def test_get_items_filter_by_category(
+    client: AsyncClient, sample_item: Item
+) -> None:
     resp = await client.get("/api/items/", params={"category": ItemCategory.WEAPONS})
     assert resp.status_code == 200
     items = resp.json()["items"]
@@ -67,9 +71,15 @@ async def test_get_item_not_found(client: AsyncClient) -> None:
     assert resp.status_code == 404
 
 
-async def test_get_items_filter_by_grade(client: AsyncClient, db_session: AsyncSession) -> None:
-    rare = Item(name="Grade Rare Item", category=ItemCategory.ARMOR, grade=ItemGrade.RARE)
-    heroic = Item(name="Grade Heroic Item", category=ItemCategory.ARMOR, grade=ItemGrade.HEROIC)
+async def test_get_items_filter_by_grade(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    rare = Item(
+        name="Grade Rare Item", category=ItemCategory.ARMOR, grade=ItemGrade.RARE
+    )
+    heroic = Item(
+        name="Grade Heroic Item", category=ItemCategory.ARMOR, grade=ItemGrade.HEROIC
+    )
     db_session.add_all([rare, heroic])
     await db_session.commit()
 
@@ -82,13 +92,25 @@ async def test_get_items_filter_by_grade(client: AsyncClient, db_session: AsyncS
     assert "Grade Rare Item" not in names
 
 
-async def test_get_items_pagination(client: AsyncClient, db_session: AsyncSession) -> None:
+async def test_get_items_pagination(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
     for i in range(5):
-        db_session.add(Item(name=f"Paginate Item {i:02d}", category=ItemCategory.OTHER, grade=ItemGrade.GRAND))
+        db_session.add(
+            Item(
+                name=f"Paginate Item {i:02d}",
+                category=ItemCategory.OTHER,
+                grade=ItemGrade.GRAND,
+            )
+        )
     await db_session.commit()
 
-    page1 = await client.get("/api/items/", params={"q": "Paginate Item", "limit": 3, "offset": 0})
-    page2 = await client.get("/api/items/", params={"q": "Paginate Item", "limit": 3, "offset": 3})
+    page1 = await client.get(
+        "/api/items/", params={"q": "Paginate Item", "limit": 3, "offset": 0}
+    )
+    page2 = await client.get(
+        "/api/items/", params={"q": "Paginate Item", "limit": 3, "offset": 3}
+    )
     assert page1.status_code == page2.status_code == 200
     d1, d2 = page1.json(), page2.json()
     assert d1["total"] == 5
