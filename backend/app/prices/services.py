@@ -4,8 +4,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.config.exceptions import NotFoundError
 from app.items.models import Item
-from app.prices.models import PricePoint
-from app.prices.schemas import PriceBucketRead, PricePointRead
+from app.prices.models import PricePoint, utcnow
+from app.prices.schemas import PriceBucketRead, PricePointCreate, PricePointRead
 
 
 async def get_item_price_history(
@@ -20,13 +20,16 @@ async def get_item_price_history(
     if item is None:
         raise NotFoundError("Item not found")
 
+    def to_naive(dt: datetime) -> datetime:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None) if dt.tzinfo else dt
+
     query = select(PricePoint).where(
         and_(PricePoint.item_id == item_id, PricePoint.source == source)
     )
     if from_ts is not None:
-        query = query.where(PricePoint.captured_at >= from_ts)
+        query = query.where(PricePoint.captured_at >= to_naive(from_ts))
     if to_ts is not None:
-        query = query.where(PricePoint.captured_at <= to_ts)
+        query = query.where(PricePoint.captured_at <= to_naive(to_ts))
 
     result = await session.exec(query.order_by(PricePoint.captured_at))
     rows = result.all()
@@ -87,3 +90,34 @@ async def get_item_price_history(
         )
         for bucket_start, values in sorted(buckets.items(), key=lambda x: x[0])
     ]
+
+
+async def add_price_point(
+    session: AsyncSession,
+    item_id: int,
+    data: PricePointCreate,
+) -> PricePoint:
+    item = await session.get(Item, item_id)
+    if item is None:
+        raise NotFoundError("Item not found")
+
+    # Strip timezone info — DB column is TIMESTAMP WITHOUT TIME ZONE (UTC assumed)
+    captured_at = data.captured_at
+    if captured_at.tzinfo is not None:
+        captured_at = captured_at.astimezone(timezone.utc).replace(tzinfo=None)
+
+    point = PricePoint(
+        item_id=item_id,
+        source=data.source,
+        price=data.price,
+        captured_at=captured_at,
+    )
+    session.add(point)
+
+    item.current_price = data.price
+    item.updated_at = utcnow()
+    session.add(item)
+
+    await session.commit()
+    await session.refresh(point)
+    return point

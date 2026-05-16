@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.config.db import get_async_session
-from app.prices.schemas import PriceBucketRead, PricePointRead
-from app.prices.services import get_item_price_history
+from app.prices import services
+from app.prices.schemas import PriceBucketRead, PricePointCreate, PricePointRead
 
 router = APIRouter(prefix="/items", tags=["prices"])
 
@@ -30,11 +30,30 @@ async def read_item_price_history(
     interval: Interval = Query(default=Interval.RAW),
     session: AsyncSession = Depends(get_async_session),
 ) -> list[PricePointRead] | list[PriceBucketRead]:
-    return await get_item_price_history(
+    return await services.get_item_price_history(
         session=session,
         item_id=item_id,
         source=source,
         from_ts=from_ts,
         to_ts=to_ts,
         interval=interval.value,
+    )
+
+
+@router.post(
+    "/{item_id}/prices",
+    response_model=PricePointRead,
+    status_code=201,
+)
+async def create_price_point(
+    item_id: int,
+    data: PricePointCreate,
+    session: AsyncSession = Depends(get_async_session),
+) -> PricePointRead:
+    point = await services.add_price_point(session, item_id, data)
+    return PricePointRead(
+        item_id=point.item_id,
+        source=point.source,
+        price=point.price,
+        captured_at=point.captured_at,
     )

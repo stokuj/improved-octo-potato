@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel
+from pydantic import Field as PydanticField
 
 
 class PricePointRead(BaseModel):
@@ -16,3 +17,9 @@ class PriceBucketRead(BaseModel):
     max_price: int
     avg_price: float
     last_price: int
+
+
+class PricePointCreate(BaseModel):
+    source: str = PydanticField(min_length=1, max_length=40)
+    price: int = PydanticField(ge=0)
+    captured_at: datetime

@@ -12,6 +12,8 @@ from app.prices.models import PricePoint  # noqa: F401
 from app.profiles.models import Profile  # noqa: F401
 from app.user_items.models import UserItem  # noqa: F401
 from app.users.models import User  # noqa: F401
+from app.crafting.models import Recipe  # noqa: F401
+from app.crafting.models import RecipeIngredient  # noqa: F401
 from app.config.settings import settings
 
 # this is the Alembic Config object, which provides
