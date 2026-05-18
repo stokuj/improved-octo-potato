@@ -24,6 +24,8 @@ class IngestClient:
 
         if 200 <= response.status_code < 300:
             return SendOutcome.SUCCESS
+        if response.status_code == 429:
+            return SendOutcome.RETRY
         if 400 <= response.status_code < 500:
             return SendOutcome.SKIP
         return SendOutcome.RETRY

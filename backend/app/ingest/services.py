@@ -78,6 +78,7 @@ async def _process_row(
             PricePointCreate(source=row.source, price=row.price, captured_at=ts),
         )
     except Exception as e:
+        await session.rollback()
         return (
             False,
             created,
