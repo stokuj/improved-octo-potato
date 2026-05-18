@@ -26,6 +26,7 @@ class ItemCategory(StrEnum):
 
 class ItemGrade(StrEnum):
     ALL = "All"
+    BASIC = "Basic"
     GRAND = "Grand"
     RARE = "Rare"
     ARCANE = "Arcane"

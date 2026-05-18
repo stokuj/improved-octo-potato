@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run pytest *)",
+      "Bash(uv run pytest)",
+      "Bash(uv run ruff check *)",
+      "Bash(uv run ruff check)",
+      "Bash(uv run ruff format --check *)",
+      "Bash(podman logs *)"
+    ]
+  }
+}
