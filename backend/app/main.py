@@ -2,15 +2,19 @@ from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.admin import setup_admin
 from app.auth.router import router as auth_router
 from app.config.exceptions import register_exception_handlers
+from app.config.rate_limit import limiter
 from app.config.settings import settings
+from app.crafting.router import router as crafting_router
+from app.ingest.router import router as ingest_router
 from app.items.router import router as items_router
 from app.prices.router import router as prices_router
 from app.profiles.router import router as profiles_router
-from app.crafting.router import router as crafting_router
 from app.user_items.router import router as user_items_router
 from app.users.router import router as users_router
 
@@ -21,6 +25,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,6 +47,7 @@ api.include_router(items_router)
 api.include_router(prices_router)
 api.include_router(user_items_router)
 api.include_router(crafting_router)
+api.include_router(ingest_router)
 app.include_router(api)
 
 setup_admin(app)

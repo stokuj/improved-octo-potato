@@ -129,7 +129,7 @@ def make_price_history(
             points.append(
                 PricePoint(
                     item_id=item_id,
-                    source="market",
+                    source="ah",
                     price=price,
                     captured_at=captured,
                 )

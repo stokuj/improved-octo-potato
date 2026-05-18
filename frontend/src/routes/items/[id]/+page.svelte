@@ -9,7 +9,7 @@
     /** @typedef {{ id: number, name: string, category: string, grade: string, current_price: number | null, updated_at: string }} ItemDetail */
     /** @typedef {{ t: string, price: number }} ChartPoint */
 
-    const SOURCE = 'market';
+    const SOURCE = 'ah';
 
     const RANGE_OPTIONS = [
         { key: '7D', days: 7, interval: '1h' },

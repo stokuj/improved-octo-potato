@@ -1,0 +1,38 @@
+name: watcher
+
+on:
+  push:
+    branches: [main, dev-2]
+    paths:
+      - "watcher/**"
+      - ".github/workflows/watcher.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "watcher/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: install dependencies
+        working-directory: watcher
+        run: uv sync
+
+      - name: ruff check
+        working-directory: watcher
+        run: uv run ruff check .
+
+      - name: ruff format
+        working-directory: watcher
+        run: uv run ruff format --check .
+
+      - name: pytest
+        working-directory: watcher
+        run: uv run pytest -v
