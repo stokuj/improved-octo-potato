@@ -21,5 +21,5 @@ class PriceBucketRead(BaseModel):
 
 class PricePointCreate(BaseModel):
     source: str = PydanticField(min_length=1, max_length=40)
-    price: int = PydanticField(ge=0)
+    price: int = PydanticField(gt=0)
     captured_at: datetime

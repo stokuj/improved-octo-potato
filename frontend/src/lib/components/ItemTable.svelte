@@ -1,31 +1,31 @@
-<script>
+<script lang="ts">
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import { user } from '$lib/auth.svelte.js';
     import { API_BASE_URL } from '$lib/config.js';
     import { gradeColor } from '$lib/grades.js';
+    import { splitCurrency } from '$lib/currency.js';
+    import type { ItemListItem } from '$lib/types';
 
     let {
         apiEndpoint = '/items/',
         requireAuth = false,
         showOnlySaved = false
+    }: {
+        apiEndpoint?: string
+        requireAuth?: boolean
+        showOnlySaved?: boolean
     } = $props();
 
-    /** @typedef {{ id: number, name: string, category: string, grade: string, current_price: number | null, updated_at: string }} ItemRow */
-
-    /** @type {ItemRow[]} */
-    let items = $state([]);
-    let total = $state(0);
+    let items: ItemListItem[] = $state([]);
+    let total: number = $state(0);
     let offset = $state(0);
     let limit = 100;
     let loading = $state(false);
     let hasMore = $state(true);
-    /** @type {string | null} */
-    let fetchError = $state(null);
-    /** @type {Set<number>} */
-    let savingIds = $state(new Set());
-    /** @type {Set<number>} */
-    let savedIds = $state(new Set());
+    let fetchError: string | null = $state(null);
+    let savingIds: Set<number> = $state(new Set());
+    let savedIds: Set<number> = $state(new Set());
 
     let searchQuery = $state('');
     let selectedCategory = $state('');
@@ -46,8 +46,7 @@
     const VISIBLE_COUNT = 20;
     let scrollY = $state(0);
     let containerTop = $state(0);
-    /** @type {HTMLDivElement | undefined} */
-    let containerRef;
+    let containerRef: HTMLDivElement | undefined;
 
     let startIndex = $derived(Math.max(0, Math.floor((scrollY - containerTop) / ROW_HEIGHT)));
     let endIndex = $derived(Math.min(items.length, startIndex + VISIBLE_COUNT));
@@ -106,8 +105,7 @@
 
             if (response.ok) {
                 const data = await response.json();
-                /** @type {ItemRow[]} */
-                const nextItems = data.items;
+                const nextItems = data.items as ItemListItem[];
                 items = [...items, ...nextItems];
                 total = data.total;
                 offset += limit;
@@ -123,8 +121,7 @@
         }
     }
 
-    /** @param {number} itemId */
-    async function toggleSaved(itemId) {
+    async function toggleSaved(itemId: number) {
         if (!user.isLoggedIn) {
             goto('/auth');
             return;
@@ -166,8 +163,7 @@
         }
     }
 
-    /** @type {ReturnType<typeof setTimeout> | undefined} */
-    let searchTimeout;
+    let searchTimeout: ReturnType<typeof setTimeout> | undefined;
     function handleSearch() {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => loadItems(true), 300);
@@ -181,11 +177,6 @@
 
     onMount(() => {
         const init = async () => {
-            if (requireAuth && !user.loading && !user.isLoggedIn) {
-                goto('/auth');
-                return;
-            }
-
             await loadSavedIds();
             await loadItems(true);
             updateContainerPos();
@@ -205,6 +196,7 @@
     $effect(() => {
         if (user.loading) return;
         if (!user.isLoggedIn) {
+            if (requireAuth) goto('/auth');
             savedIds = new Set();
             return;
         }
@@ -220,26 +212,17 @@
         }
     });
 
-    /** @param {string} grade */
-    function getGradeBadgeStyle(grade) {
+    function getGradeBadgeStyle(grade: string) {
         const c = gradeColor(grade);
         return `color: ${c}; border-color: ${c}55;`;
     }
 
-    /** @param {string} dateStr */
-    function formatTime(dateStr) {
+    function formatTime(dateStr: string) {
         const date = new Date(dateStr);
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
-    /** @param {number | null | undefined} totalBronze */
-    function splitCurrency(totalBronze) {
-        if (!totalBronze && totalBronze !== 0) return null;
-        const gold = Math.floor(totalBronze / 10000);
-        const silver = Math.floor((totalBronze % 10000) / 100);
-        const bronze = totalBronze % 100;
-        return { gold, silver, bronze };
-    }
+
 </script>
 
 <svelte:window bind:scrollY />
@@ -259,14 +242,14 @@
         </div>
 
         <div class="flex gap-2 w-full md:w-auto">
-            <select class="select select-bordered select-sm md:select-md flex-1" bind:value={selectedCategory} onchange={() => loadItems(true)}>
+            <select class="select select-bordered select-sm md:select-md w-full md:min-w-[180px]" bind:value={selectedCategory} onchange={() => loadItems(true)}>
                 <option value="">All Categories</option>
                 {#each CATEGORIES as cat}
                     <option value={cat}>{cat}</option>
                 {/each}
             </select>
 
-            <select class="select select-bordered select-sm md:select-md flex-1" bind:value={selectedGrade} onchange={() => loadItems(true)}>
+            <select class="select select-bordered select-sm md:select-md w-full md:min-w-[150px]" bind:value={selectedGrade} onchange={() => loadItems(true)}>
                 <option value="All">All Grades</option>
                 {#each GRADES.filter((g) => g !== 'All') as g}
                     <option value={g}>{g}</option>

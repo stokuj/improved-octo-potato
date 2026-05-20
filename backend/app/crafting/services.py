@@ -49,7 +49,7 @@ async def list_summaries(session: AsyncSession) -> list[CraftSummary]:
                 output_qty=result.output_qty,
                 total_material_cost=result.total_material_cost,
                 market_price=result.market_price,
-                profit_per_craft=result.profit_per_craft,
+                batch_profit=result.batch_profit,
             )
         )
     return summaries

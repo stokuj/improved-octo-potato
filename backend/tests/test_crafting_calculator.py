@@ -46,7 +46,7 @@ def test_basic_single_ingredient():
     assert isinstance(result, CraftResult)
     assert result.item_id == 1
     assert result.total_material_cost == 1000  # 5 * 200
-    assert result.profit_per_craft == 0  # 1000 - 1000
+    assert result.batch_profit == 0  # 1000 - 1000
     assert len(result.ingredients) == 1
     assert result.ingredients[0].qty_needed == 5
     assert result.ingredients[0].total_cost == 1000
@@ -169,4 +169,4 @@ def test_null_market_price_gives_null_profit():
     result = build_craft_tree(1, 1, {}, all_recipes, all_items)
 
     assert result.market_price is None
-    assert result.profit_per_craft is None
+    assert result.batch_profit is None

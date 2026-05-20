@@ -1,12 +1,11 @@
-<script>
+<script lang="ts">
     import { API_BASE_URL } from '$lib/config.js';
     import { gradeColor } from '$lib/grades.js';
+    import type { ItemListItem } from '$lib/types';
 
-    /** @type {any[]} */
-    let items = $state([]);
+    let items: ItemListItem[] = $state([]);
     let loading = $state(true);
-    /** @type {string|null} */
-    let error = $state(null);
+    let error: string | null = $state(null);
 
     async function loadHotItems() {
         try {

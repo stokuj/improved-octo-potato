@@ -1,4 +1,5 @@
-from typing import Any
+import uuid
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -6,17 +7,18 @@ from app.profiles.models import Profile, utcnow
 from app.profiles.schemas import ProfileUpdate
 
 
-async def get_or_create_profile(session: AsyncSession, user_id: Any) -> Profile:
-    result = await session.exec(select(Profile).where(Profile.user_id == user_id))
-    profile = result.one_or_none()
-    if profile is not None:
-        return profile
+async def get_or_create_profile(session: AsyncSession, user_id: uuid.UUID) -> Profile:
+    stmt = (
+        pg_insert(Profile)
+        .values(user_id=user_id, is_private=True)
+        .on_conflict_do_nothing(index_elements=["user_id"])
+    )
+    result = await session.exec(stmt)  # type: ignore[arg-type]
+    if result.rowcount:
+        await session.commit()
 
-    profile = Profile(user_id=user_id, is_private=True)
-    session.add(profile)
-    await session.commit()
-    await session.refresh(profile)
-    return profile
+    row = await session.exec(select(Profile).where(Profile.user_id == user_id))
+    return row.one()
 
 
 async def update_profile(

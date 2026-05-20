@@ -32,6 +32,8 @@ services:
       CORS_ORIGINS: '["http://localhost:5173","http://127.0.0.1:5173"]'
     volumes:
       - ../../backend/app:/app/app:z
+      - ../../backend/alembic:/app/alembic:z
+      - ../../backend/seed.py:/app/seed.py:z
     ports:
       - "8000:8000"
     depends_on:

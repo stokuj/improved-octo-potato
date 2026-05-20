@@ -1,3 +1,4 @@
+import uuid
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.pool import NullPool
@@ -23,7 +24,7 @@ async def db_session():
 @pytest.fixture()
 async def sample_item(db_session: AsyncSession) -> Item:
     item = Item(
-        name="Test Sword",
+        name=f"Test-Sword-{uuid.uuid4().hex[:6]}",
         category=ItemCategory.WEAPONS,
         grade=ItemGrade.RARE,
         current_price=5000,
@@ -53,17 +54,17 @@ async def test_get_items_filter_by_category(
 
 
 async def test_get_items_filter_by_name(client: AsyncClient, sample_item: Item) -> None:
-    resp = await client.get("/api/items/", params={"q": "Test Sword"})
+    resp = await client.get("/api/items/", params={"q": sample_item.name})
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] >= 1
-    assert any(i["name"] == "Test Sword" for i in data["items"])
+    assert any(i["name"] == sample_item.name for i in data["items"])
 
 
 async def test_get_item_by_id(client: AsyncClient, sample_item: Item) -> None:
     resp = await client.get(f"/api/items/{sample_item.id}")
     assert resp.status_code == 200
-    assert resp.json()["name"] == "Test Sword"
+    assert resp.json()["name"] == sample_item.name
 
 
 async def test_get_item_not_found(client: AsyncClient) -> None:
@@ -74,11 +75,12 @@ async def test_get_item_not_found(client: AsyncClient) -> None:
 async def test_get_items_filter_by_grade(
     client: AsyncClient, db_session: AsyncSession
 ) -> None:
+    uid = uuid.uuid4().hex[:6]
     rare = Item(
-        name="Grade Rare Item", category=ItemCategory.ARMOR, grade=ItemGrade.RARE
+        name=f"Grade-Rare-{uid}", category=ItemCategory.ARMOR, grade=ItemGrade.RARE
     )
     heroic = Item(
-        name="Grade Heroic Item", category=ItemCategory.ARMOR, grade=ItemGrade.HEROIC
+        name=f"Grade-Heroic-{uid}", category=ItemCategory.ARMOR, grade=ItemGrade.HEROIC
     )
     db_session.add_all([rare, heroic])
     await db_session.commit()
@@ -88,17 +90,18 @@ async def test_get_items_filter_by_grade(
     items = resp.json()["items"]
     assert all(i["grade"] == ItemGrade.HEROIC for i in items)
     names = [i["name"] for i in items]
-    assert "Grade Heroic Item" in names
-    assert "Grade Rare Item" not in names
+    assert heroic.name in names
+    assert rare.name not in names
 
 
 async def test_get_items_pagination(
     client: AsyncClient, db_session: AsyncSession
 ) -> None:
+    prefix = f"Paginate-{uuid.uuid4().hex[:8]}"
     for i in range(5):
         db_session.add(
             Item(
-                name=f"Paginate Item {i:02d}",
+                name=f"{prefix}-{i:02d}",
                 category=ItemCategory.OTHER,
                 grade=ItemGrade.GRAND,
             )
@@ -106,17 +109,21 @@ async def test_get_items_pagination(
     await db_session.commit()
 
     page1 = await client.get(
-        "/api/items/", params={"q": "Paginate Item", "limit": 3, "offset": 0}
+        "/api/items/", params={"q": prefix, "limit": 3, "offset": 0}
     )
     page2 = await client.get(
-        "/api/items/", params={"q": "Paginate Item", "limit": 3, "offset": 3}
+        "/api/items/", params={"q": prefix, "limit": 3, "offset": 3}
     )
     assert page1.status_code == page2.status_code == 200
     d1, d2 = page1.json(), page2.json()
     assert d1["total"] == 5
     assert len(d1["items"]) == 3
     assert len(d2["items"]) == 2
-    # No overlap between pages
     ids1 = {i["id"] for i in d1["items"]}
     ids2 = {i["id"] for i in d2["items"]}
     assert ids1.isdisjoint(ids2)
+
+
+async def test_search_too_long_returns_422(client: AsyncClient) -> None:
+    resp = await client.get(f"/api/items/?q={'a' * 201}")
+    assert resp.status_code == 422

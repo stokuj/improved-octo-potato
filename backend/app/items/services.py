@@ -16,7 +16,7 @@ async def get_items(
 ) -> PaginatedItems:
     statement = select(Item)
     if q is not None:
-        statement = statement.where(col(Item.name).contains(q))
+        statement = statement.where(col(Item.name).ilike(f"%{q}%"))
     if category is not None:
         statement = statement.where(Item.category == category)
     if grade is not None:

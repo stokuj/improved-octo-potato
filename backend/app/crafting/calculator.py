@@ -56,7 +56,7 @@ def build_craft_tree(
         output_qty=recipe.output_qty,
         multiplier=multiplier,
         market_price=market_price,
-        profit_per_craft=profit,
+        batch_profit=profit,
         total_material_cost=total_material_cost,
         has_missing_prices=has_missing_prices,
         ingredients=nodes,
@@ -91,8 +91,10 @@ def _build_node(
         crafts_possible = have // qty_needed if qty_needed > 0 else 0
 
     sub_ingredients: list[CraftNode] = []
+    recipe_output_qty: int | None = None
     if can_craft:
         recipe, ingredients = all_recipes[item_id]
+        recipe_output_qty = recipe.output_qty
         crafts_needed = ceil(qty_needed / recipe.output_qty)
         new_visited = visited | {item_id}
         for ing in ingredients:
@@ -115,5 +117,6 @@ def _build_node(
         total_cost=total_cost,
         can_craft=can_craft,
         crafts_possible=crafts_possible,
+        output_qty=recipe_output_qty,
         ingredients=sub_ingredients,
     )

@@ -1,5 +1,6 @@
 # backend/tests/test_crafting.py
 import os
+import uuid
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.pool import NullPool
@@ -24,20 +25,21 @@ async def db_session():
 
 @pytest.fixture()
 async def crafting_setup(db_session: AsyncSession):
+    uid = uuid.uuid4().hex[:6]
     sword = Item(
-        name="Craft Sword",
+        name=f"Craft-Sword-{uid}",
         category=ItemCategory.WEAPONS,
         grade=ItemGrade.RARE,
         current_price=10000,
     )
     ingot = Item(
-        name="Craft Ingot",
+        name=f"Craft-Ingot-{uid}",
         category=ItemCategory.CRAFTING,
         grade=ItemGrade.GRAND,
         current_price=1000,
     )
     ore = Item(
-        name="Craft Ore",
+        name=f"Craft-Ore-{uid}",
         category=ItemCategory.CRAFTING,
         grade=ItemGrade.GRAND,
         current_price=100,
@@ -81,7 +83,7 @@ async def test_calculate_basic(client: AsyncClient, crafting_setup):
     data = resp.json()
     assert data["item_id"] == sword.id
     assert data["total_material_cost"] == 5000  # 5 ingots * 1000
-    assert data["profit_per_craft"] == 5000  # 10000 - 5000
+    assert data["batch_profit"] == 5000  # 10000 - 5000
     assert len(data["ingredients"]) == 1
     ingot_node = data["ingredients"][0]
     assert ingot_node["qty_needed"] == 5
@@ -136,7 +138,7 @@ async def test_list_summaries(client: AsyncClient, crafting_setup):
     assert crafting_setup["ingot"].id in item_ids
     sword_summary = next(d for d in data if d["item_id"] == crafting_setup["sword"].id)
     assert sword_summary["total_material_cost"] == 5000
-    assert sword_summary["profit_per_craft"] == 5000
+    assert sword_summary["batch_profit"] == 5000
 
 
 async def test_calculate_multiplier_too_large_returns_422(
@@ -175,14 +177,15 @@ async def test_calculate_has_missing_prices_when_ingredient_has_no_price(
     client: AsyncClient, db_session: AsyncSession
 ):
     # Item with no price as ingredient → has_missing_prices=True, profit=null
+    uid2 = uuid.uuid4().hex[:6]
     output = Item(
-        name="MP Output",
+        name=f"MP-Output-{uid2}",
         category=ItemCategory.WEAPONS,
         grade=ItemGrade.RARE,
         current_price=5000,
     )
     ingredient = Item(
-        name="MP Ingredient",
+        name=f"MP-Ingr-{uid2}",
         category=ItemCategory.CRAFTING,
         grade=ItemGrade.GRAND,
         current_price=None,
@@ -210,5 +213,5 @@ async def test_calculate_has_missing_prices_when_ingredient_has_no_price(
     assert resp.status_code == 200
     data = resp.json()
     assert data["has_missing_prices"] is True
-    assert data["profit_per_craft"] is None
+    assert data["batch_profit"] is None
     assert data["total_material_cost"] == 0  # ingredient treated as 0 cost

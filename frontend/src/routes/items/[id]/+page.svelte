@@ -1,311 +1,367 @@
-<script>
+<script lang="ts">
     import { onMount } from 'svelte';
     import { page } from '$app/state';
     import { API_BASE_URL } from '$lib/config.js';
+    import { user } from '$lib/auth.svelte.js';
     import { gradeColor } from '$lib/grades.js';
+    import { formatCurrency, splitCurrency } from '$lib/currency.js';
     import EChartsLineChart from '$lib/components/charts/EChartsLineChart.svelte';
-    import CraftingTab from '$lib/components/CraftingTab.svelte';
-
-    /** @typedef {{ id: number, name: string, category: string, grade: string, current_price: number | null, updated_at: string }} ItemDetail */
-    /** @typedef {{ t: string, price: number }} ChartPoint */
+    import RecipeCard from '$lib/components/crafting/RecipeCard.svelte';
+    import type { ItemRead, CraftResult, CraftNode, ChartPoint, NodeOverride } from '$lib/types';
 
     const SOURCE = 'ah';
-
     const RANGE_OPTIONS = [
-        { key: '7D', days: 7, interval: '1h' },
-        { key: '30D', days: 30, interval: '1h' },
-        { key: '90D', days: 90, interval: '1d' },
-        { key: 'MAX', days: null, interval: '1d' }
+        { key: '7D',  days: 7,    interval: '1h' },
+        { key: '30D', days: 30,   interval: '1h' },
+        { key: '90D', days: 90,   interval: '1d' },
+        { key: 'MAX', days: null, interval: '1d' },
     ];
 
     let selectedRange = $state('30D');
-    let activeTab = $state('price');
 
-    /** @type {ItemDetail | null} */
-    let item = $state(null);
+    let item: ItemRead | null = $state(null);
     let loadingItem = $state(true);
-    /** @type {string | null} */
-    let itemError = $state(null);
+    let itemError: string | null = $state(null);
 
-    /** @type {ChartPoint[]} */
-    let chartPoints = $state([]);
-    let loadingHistory = $state(true);
-    /** @type {string | null} */
-    let historyError = $state(null);
+    let chartPoints: ChartPoint[] = $state([]);
+    let loadingHistory = $state(false);
 
-    function selectedConfig() {
-        return RANGE_OPTIONS.find((r) => r.key === selectedRange) || RANGE_OPTIONS[1];
+    let craftTree: CraftResult | null = $state(null);
+    let hasRecipe: boolean | null = $state(null);
+
+    let batchSize: number = $state(1);
+    let nodeOverrides: Record<number, NodeOverride> = $state({});
+    let inventory: Record<number, number> = $state({});
+
+    function computeNodeCost(node: CraftNode, scale: number = batchSize): number {
+        const qty = node.qty_needed * scale;
+        const have = inventory[node.item_id] ?? 0;
+        const stillNeed = Math.max(0, qty - have);
+        const override = nodeOverrides[node.item_id];
+        if (override?.mode === 'buy' || !node.can_craft || node.ingredients.length === 0) {
+            return (node.unit_price ?? 0) * stillNeed;
+        }
+        if (stillNeed === 0) return 0;
+        // Use output_qty to correctly scale children when batchSize produces a different
+        // ceiling than linear multiplication (e.g. qty_needed=11, output_qty=10, batch=2
+        // needs 3 crafts, not 2*2=4).
+        const outputQty = node.output_qty ?? 1;
+        const storedCrafts = Math.ceil(node.qty_needed / outputQty);
+        const desiredCrafts = Math.ceil(stillNeed / outputQty);
+        const childScale = storedCrafts > 0 ? desiredCrafts / storedCrafts : 0;
+        return node.ingredients.reduce((s, c) => s + computeNodeCost(c, childScale), 0);
     }
 
-    function getItemId() {
-        return Number(page.params.id);
+    const materialCost = $derived.by(() => {
+        if (!craftTree) return null;
+        return craftTree.ingredients.reduce((s, n) => s + computeNodeCost(n), 0);
+    });
+
+    const profit = $derived.by(() => {
+        if (materialCost == null || item == null || item.current_price == null || craftTree == null) return null;
+        return item.current_price * craftTree.output_qty * batchSize - materialCost;
+    });
+
+    const margin = $derived.by(() => {
+        if (profit == null || item == null || item.current_price == null || item.current_price <= 0 || craftTree == null) return null;
+        return Math.round((profit / (item.current_price * craftTree.output_qty * batchSize)) * 100);
+    });
+
+    const profitPill = $derived.by(() => {
+        if (materialCost == null || item == null || item.current_price == null) return null;
+        return item.current_price > materialCost / ((craftTree?.output_qty ?? 1) * batchSize) ? 'above' : 'below';
+    });
+
+    const stats = $derived.by(() => {
+        if (chartPoints.length === 0) return null;
+        const prices = chartPoints.map((p) => p.price);
+        return {
+            min: Math.min(...prices),
+            max: Math.max(...prices),
+            avg: Math.round(prices.reduce((s, n) => s + n, 0) / prices.length),
+            last: prices[prices.length - 1],
+        };
+    });
+
+    function getItemId() { return Number(page.params.id); }
+    function rangeConfig() { return RANGE_OPTIONS.find((r) => r.key === selectedRange) ?? RANGE_OPTIONS[1]; }
+
+    function timeAgo(iso: string): string {
+        const diff = Date.now() - new Date(iso).getTime();
+        const m = Math.floor(diff / 60000);
+        if (m < 1) return 'just now';
+        if (m < 60) return `${m}m ago`;
+        const h = Math.floor(m / 60);
+        if (h < 24) return `${h}h ago`;
+        return `${Math.floor(h / 24)}d ago`;
     }
 
     async function loadItem() {
-        loadingItem = true;
-        itemError = null;
-
+        loadingItem = true; itemError = null;
         try {
-            const response = await fetch(`${API_BASE_URL}/items/${getItemId()}`);
-            if (!response.ok) {
-                itemError = `Could not load item (${response.status})`;
-                return;
-            }
-            item = await response.json();
-        } catch (e) {
-            console.error('Error loading item:', e);
-            itemError = 'Network error while loading item';
-        } finally {
-            loadingItem = false;
-        }
+            const r = await fetch(`${API_BASE_URL}/items/${getItemId()}`);
+            if (!r.ok) { itemError = `Could not load item (${r.status})`; return; }
+            item = await r.json();
+        } catch { itemError = 'Network error loading item'; }
+        finally { loadingItem = false; }
     }
 
     async function loadHistory() {
         loadingHistory = true;
-        historyError = null;
-
         try {
-            const cfg = selectedConfig();
-            const params = new URLSearchParams({
-                source: SOURCE,
-                interval: cfg.interval
-            });
-
+            const cfg = rangeConfig();
+            const params = new URLSearchParams({ source: SOURCE, interval: cfg.interval });
             if (cfg.days !== null) {
                 const from = new Date();
                 from.setDate(from.getDate() - cfg.days);
                 params.append('from', from.toISOString());
             }
             params.append('to', new Date().toISOString());
-
-            const response = await fetch(`${API_BASE_URL}/items/${getItemId()}/price-history?${params.toString()}`);
-            if (!response.ok) {
-                historyError = `Could not load price history (${response.status})`;
-                chartPoints = [];
-                return;
-            }
-
-            /** @type {any[]} */
-            const data = await response.json();
+            const r = await fetch(`${API_BASE_URL}/items/${getItemId()}/price-history?${params}`);
+            if (!r.ok) { chartPoints = []; return; }
+            const data = await r.json();
             chartPoints = data
-                .map((row) => ({
-                    t: row.bucket_start || row.captured_at,
-                    price: row.last_price ?? row.price
-                }))
-                .filter((row) => row.t && Number.isFinite(row.price))
-                .sort((a, b) => new Date(a.t).getTime() - new Date(b.t).getTime());
-        } catch (e) {
-            console.error('Error loading history:', e);
-            historyError = 'Network error while loading history';
-            chartPoints = [];
-        } finally {
-            loadingHistory = false;
-        }
+                .map((row: any) => ({ t: row.bucket_start || row.captured_at, price: row.last_price ?? row.price } as ChartPoint))
+                .filter((row: ChartPoint) => row.t && Number.isFinite(row.price))
+                .sort((a: ChartPoint, b: ChartPoint) => new Date(a.t).getTime() - new Date(b.t).getTime());
+        } catch { chartPoints = []; }
+        finally { loadingHistory = false; }
     }
 
-    /** @param {string} rangeKey */
-    function handleRangeChange(rangeKey) {
-        if (selectedRange === rangeKey) return;
-        selectedRange = rangeKey;
+    async function loadCraftTree() {
+        try {
+            const r = await fetch(`${API_BASE_URL}/crafting/${getItemId()}/calculate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ multiplier: 1, inventory: {} }),
+            });
+            if (r.status === 404) { hasRecipe = false; return; }
+            if (!r.ok) return;
+            craftTree = await r.json();
+            hasRecipe = true;
+
+            if (user.isLoggedIn) {
+                try {
+                    const inv = await fetch(
+                        `${API_BASE_URL}/inventory/for-recipe/${getItemId()}`,
+                        { credentials: 'include' }
+                    );
+                    if (inv.ok) {
+                        const raw = await inv.json();
+                        inventory = Object.fromEntries(
+                            Object.entries(raw as Record<string, number>).map(([k, v]) => [Number(k), v])
+                        );
+                    }
+                } catch { /* inventory stays empty */ }
+            } else {
+                inventory = {};
+            }
+        } catch { hasRecipe = false; }
+    }
+
+    function handleRangeChange(key: string): void {
+        if (selectedRange === key) return;
+        selectedRange = key;
         loadHistory();
     }
 
-    /** @param {number | null | undefined} totalBronze */
-    function splitCurrency(totalBronze) {
-        if (!totalBronze && totalBronze !== 0) return null;
-        const gold = Math.floor(totalBronze / 10000);
-        const silver = Math.floor((totalBronze % 10000) / 100);
-        const bronze = totalBronze % 100;
-        return { gold, silver, bronze };
+    function handleBatchChange(n: number): void { batchSize = n; }
+
+    function handleToggleMode(id: number): void {
+        const cur = nodeOverrides[id];
+        nodeOverrides = { ...nodeOverrides, [id]: { mode: cur?.mode === 'buy' ? 'craft' : 'buy', expanded: cur?.expanded ?? true } };
     }
 
-    /** @param {number | null | undefined} totalBronze */
-    function formatCurrency(totalBronze) {
-        const c = splitCurrency(totalBronze);
-        if (!c) return '--';
-        const gold = c.gold > 0 ? `${c.gold}g ` : '';
-        const silver = c.silver > 0 || c.gold > 0 ? `${c.silver.toString().padStart(2, '0')}s ` : '';
-        const bronze = `${c.bronze.toString().padStart(2, '0')}b`;
-        return `${gold}${silver}${bronze}`.trim();
+    function handleToggleExpand(id: number): void {
+        const cur = nodeOverrides[id];
+        nodeOverrides = { ...nodeOverrides, [id]: { mode: cur?.mode ?? 'craft', expanded: !(cur?.expanded ?? true) } };
     }
 
-    function getStats() {
-        if (chartPoints.length === 0) return null;
-        const prices = chartPoints.map((p) => p.price);
-        const min = Math.min(...prices);
-        const max = Math.max(...prices);
-        const last = prices[prices.length - 1];
-        const avg = Math.round(prices.reduce((sum, n) => sum + n, 0) / prices.length);
-        return { min, max, avg, last };
+    async function handleSetInventory(itemId: number, value: number): Promise<void> {
+        const prev = inventory;
+        const next = { ...inventory };
+        if (value > 0) next[itemId] = value;
+        else delete next[itemId];
+        inventory = next;
+
+        if (!user.isLoggedIn) return;
+        try {
+            const resp = await fetch(`${API_BASE_URL}/inventory/${itemId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ quantity: value }),
+            });
+            if (!resp.ok) {
+                inventory = prev;
+            }
+        } catch {
+            inventory = prev;
+        }
     }
 
     onMount(async () => {
-        const itemId = getItemId();
-        if (!Number.isFinite(itemId) || itemId <= 0) {
-            itemError = 'Invalid item id';
-            loadingItem = false;
-            loadingHistory = false;
-            return;
+        const id = getItemId();
+        if (!Number.isFinite(id) || id <= 0) {
+            itemError = 'Invalid item id'; loadingItem = false; return;
         }
-
-        await Promise.all([loadItem(), loadHistory()]);
+        await Promise.all([loadItem(), loadHistory(), loadCraftTree()]);
     });
 </script>
 
-<div class="space-y-6 max-w-7xl mx-auto px-4 py-6">
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <a href="/items" class="btn btn-ghost btn-sm flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+<div class="max-w-screen-xl mx-auto px-4 py-4 space-y-4">
+    <div class="flex items-center justify-between gap-4">
+        <a href="/items" class="btn btn-ghost btn-sm gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
             Back to items
         </a>
-        <div class="join shadow-sm border border-base-200">
-            {#each RANGE_OPTIONS as option}
+        <div class="join border border-base-200 shadow-sm">
+            {#each RANGE_OPTIONS as opt}
                 <button
-                    class="btn btn-sm join-item {selectedRange === option.key ? 'btn-primary' : 'btn-ghost'}"
-                    onclick={() => handleRangeChange(option.key)}
-                >
-                    {option.key}
-                </button>
+                    class="btn btn-sm join-item {selectedRange === opt.key ? 'btn-primary' : 'btn-ghost'}"
+                    onclick={() => handleRangeChange(opt.key)}
+                >{opt.key}</button>
             {/each}
         </div>
     </div>
 
     {#if loadingItem}
-        <div class="h-96 flex items-center justify-center">
-            <span class="loading loading-dots loading-lg text-primary"></span>
-        </div>
+        <div class="flex justify-center py-24"><span class="loading loading-dots loading-lg text-primary"></span></div>
     {:else if itemError}
-        <div class="alert alert-error shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <span>{itemError}</span>
-        </div>
+        <div class="alert alert-error"><span>{itemError}</span></div>
     {:else if item}
-        {@const currentPriceParts = splitCurrency(item.current_price)}
-        {@const stats = getStats()}
 
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <!-- Left Panel: Item Info -->
-            <div class="lg:col-span-1 space-y-6">
+    <div class="space-y-3">
+
+        <!-- Top row: info left, chart right -->
+        <div class="grid grid-cols-1 lg:grid-cols-[32%_1fr] gap-3 items-start">
+
+            <!-- LEFT: identity + profit hero + price -->
+            <div class="flex flex-col gap-3">
+
                 <div class="card bg-base-100 border border-base-200 shadow-sm">
-                    <div class="card-body p-6">
-                        <div class="space-y-1">
-                            <h1 class="text-2xl font-black tracking-tight">{item.name}</h1>
-                            <div class="flex flex-wrap gap-2 pt-1">
-                                <span class="badge badge-ghost badge-xs uppercase font-bold opacity-50 tracking-tighter">{item.category}</span>
-                                <span class="badge badge-outline badge-xs uppercase font-black tracking-tighter" style="color: {gradeColor(item.grade)}; border-color: {gradeColor(item.grade)}55;">{item.grade}</span>
-                            </div>
+                    <div class="card-body p-4 gap-2">
+                        <h1 class="text-2xl font-black tracking-tight leading-tight">{item.name}</h1>
+                        <div class="flex flex-wrap gap-1.5">
+                            <span class="badge badge-ghost badge-xs font-bold opacity-50 uppercase tracking-wider">{item.category}</span>
+                            <span class="badge badge-outline badge-xs font-black uppercase tracking-wider"
+                                  style="color:{gradeColor(item.grade)};border-color:{gradeColor(item.grade)}55">{item.grade}</span>
                         </div>
+                        <p class="text-[10px] font-mono opacity-30 uppercase tracking-widest">updated {timeAgo(item.updated_at)}</p>
+                    </div>
+                </div>
 
-                        <div class="divider my-4"></div>
-
-                        <div class="space-y-4">
-                            <div>
-                                <div class="text-[10px] uppercase font-black opacity-30 tracking-widest mb-1">Current Price</div>
-                                {#if currentPriceParts}
-                                    <div class="text-2xl font-black tabular-nums tracking-tight">
-                                        {#if currentPriceParts.gold > 0}<span>{currentPriceParts.gold}<span class="text-yellow-500 text-sm ml-0.5">G</span> </span>{/if}
-                                        {#if currentPriceParts.silver > 0 || currentPriceParts.gold > 0}<span>{currentPriceParts.silver.toString().padStart(2, '0')}<span class="text-slate-400 text-sm ml-0.5">S</span> </span>{/if}
-                                        <span>{currentPriceParts.bronze.toString().padStart(2, '0')}<span class="text-orange-700 text-sm ml-0.5">B</span></span>
+                {#if hasRecipe && craftTree}
+                    <div class="card border border-warning/30 shadow-sm" style="background:color-mix(in oklch, var(--color-warning) 12%, transparent)">
+                        <div class="card-body p-4 gap-1">
+                            <p class="text-[10px] font-mono uppercase tracking-widest opacity-60">Profit / batch</p>
+                            {#if profit != null}
+                                <div class="text-4xl font-black tabular-nums" style="color:var(--color-warning)">
+                                    {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
+                                </div>
+                                <p class="text-xs font-mono opacity-60">
+                                    {#if margin != null}margin {Math.max(-100, margin)}% · {/if}
+                                    sell {formatCurrency(item.current_price)} · cost {formatCurrency(materialCost)}
+                                </p>
+                                {#if margin != null}
+                                    <div class="w-full bg-base-200 rounded-full h-1.5 mt-1 overflow-hidden">
+                                        <div class="h-full rounded-full" style="width:{Math.min(100,Math.max(0,margin))}%;background:var(--color-warning)"></div>
                                     </div>
-                                {:else}
-                                    <div class="text-xl font-black opacity-20 italic">No price data</div>
                                 {/if}
-                                <div class="text-[10px] opacity-40 mt-1 uppercase font-bold">Updated: {new Date(item.updated_at).toLocaleString()}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Simple Stats Grid -->
-                {#if stats}
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="card bg-base-100 border border-base-200 shadow-sm">
-                            <div class="card-body p-4 gap-0">
-                                <div class="text-[10px] uppercase font-black opacity-30 mb-1">Min</div>
-                                <div class="text-sm font-black tabular-nums truncate">{formatCurrency(stats.min)}</div>
-                            </div>
-                        </div>
-                        <div class="card bg-base-100 border border-base-200 shadow-sm">
-                            <div class="card-body p-4 gap-0">
-                                <div class="text-[10px] uppercase font-black opacity-30 mb-1">Max</div>
-                                <div class="text-sm font-black tabular-nums truncate">{formatCurrency(stats.max)}</div>
-                            </div>
-                        </div>
-                        <div class="card bg-base-100 border border-base-200 shadow-sm">
-                            <div class="card-body p-4 gap-0">
-                                <div class="text-[10px] uppercase font-black opacity-30 mb-1">Avg</div>
-                                <div class="text-sm font-black tabular-nums truncate">{formatCurrency(stats.avg)}</div>
-                            </div>
-                        </div>
-                        <div class="card bg-base-100 border border-base-200 shadow-sm">
-                            <div class="card-body p-4 gap-0">
-                                <div class="text-[10px] uppercase font-black opacity-30 mb-1">Last</div>
-                                <div class="text-sm font-black tabular-nums truncate">{formatCurrency(stats.last)}</div>
-                            </div>
-                        </div>
-                    </div>
-                {/if}
-            </div>
-
-            <!-- Right Panel: Chart / Crafting -->
-            <div class="lg:col-span-3 space-y-6">
-                <!-- Tab switcher -->
-                <div class="tabs tabs-bordered mb-4">
-                    <button
-                        class="tab {activeTab === 'price' ? 'tab-active' : ''}"
-                        onclick={() => activeTab = 'price'}
-                    >
-                        Price History
-                    </button>
-                    <button
-                        class="tab {activeTab === 'crafting' ? 'tab-active' : ''}"
-                        onclick={() => activeTab = 'crafting'}
-                    >
-                        Crafting
-                    </button>
-                </div>
-
-                {#if activeTab === 'price'}
-                <div class="card bg-base-100 border border-base-200 shadow-sm overflow-hidden h-full">
-                    <div class="card-body p-0 gap-0 h-full">
-                        <div class="flex items-center justify-between px-6 py-4 border-b border-base-200 bg-base-200/20">
-                            <div class="flex items-center gap-2">
-                                <h2 class="font-black text-xs uppercase tracking-widest opacity-60">Price History</h2>
-                                <div class="badge badge-primary badge-outline badge-xs font-black uppercase">{selectedRange}</div>
-                            </div>
-                            <div class="text-[10px] font-bold uppercase opacity-30">Source: {SOURCE}</div>
-                        </div>
-
-                        <div class="p-6 h-full min-h-[450px]">
-                            {#if loadingHistory}
-                                <div class="h-full flex items-center justify-center">
-                                    <span class="loading loading-spinner loading-lg text-primary"></span>
-                                </div>
-                            {:else if historyError}
-                                <div class="alert alert-error shadow-sm">
-                                    <span>{historyError}</span>
-                                </div>
-                            {:else if chartPoints.length === 0}
-                                <div class="h-full flex flex-col items-center justify-center text-center opacity-30 py-20 gap-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
-                                    <span class="font-black uppercase tracking-widest text-[10px]">No historical data found for this range</span>
-                                </div>
                             {:else}
-                                <EChartsLineChart points={chartPoints} height={400} />
+                                <div class="text-2xl font-black opacity-30">—</div>
+                                <p class="text-xs font-mono opacity-40">missing prices</p>
                             {/if}
                         </div>
                     </div>
-                </div>
                 {/if}
 
-                {#if activeTab === 'crafting'}
-                <div class="card bg-base-100 border border-base-200 shadow-sm overflow-hidden">
-                    <div class="card-body p-6">
-                        <CraftingTab item={item} />
+                <div class="card bg-base-100 border border-base-200 shadow-sm">
+                    <div class="card-body p-4 gap-1">
+                        <p class="text-[10px] font-mono uppercase tracking-widest opacity-40">Market price</p>
+                        {#if item.current_price != null}
+                            {@const p = splitCurrency(item.current_price)}
+                            {#if p}
+                            <div class="text-2xl font-black tabular-nums tracking-tight">
+                                {#if p.gold > 0}<span>{p.gold}<span class="text-yellow-500 text-sm ml-0.5">g</span> </span>{/if}
+                                {#if p.silver > 0 || p.gold > 0}<span>{p.silver.toString().padStart(2,'0')}<span class="text-slate-400 text-sm ml-0.5">s</span> </span>{/if}
+                                <span>{p.bronze.toString().padStart(2,'0')}<span class="text-orange-700 text-sm ml-0.5">b</span></span>
+                            </div>
+                            {/if}
+                        {:else}
+                            <div class="text-xl font-black opacity-20 italic">No price data</div>
+                        {/if}
+                        {#if stats}
+                            {@const statRows = [['min', stats.min], ['max', stats.max], ['avg', stats.avg], ['last', stats.last]] as [string, number][]}
+                            <div class="grid grid-cols-4 gap-2 mt-2 pt-2 border-t border-base-200">
+                                {#each statRows as [label, val]}
+                                    <div>
+                                        <p class="text-[9px] font-mono uppercase tracking-widest opacity-30">{label}</p>
+                                        <p class="text-xs font-black tabular-nums truncate">{formatCurrency(val)}</p>
+                                    </div>
+                                {/each}
+                            </div>
+                        {/if}
                     </div>
                 </div>
-                {/if}
+            </div>
+
+            <!-- RIGHT: price history chart -->
+            <div class="card bg-base-100 border border-base-200 shadow-sm overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-base-200 bg-base-200/20">
+                    <div class="flex items-center gap-2">
+                        <h2 class="font-black text-xs uppercase tracking-widest opacity-60">Price history</h2>
+                        {#if profitPill}
+                            <span class="badge badge-xs font-mono {profitPill === 'above' ? 'badge-success' : 'badge-error'}">
+                                {profitPill === 'above' ? '▲ above mat. cost' : '▼ below mat. cost'}
+                            </span>
+                        {/if}
+                    </div>
+                    <span class="text-[10px] font-mono opacity-30 uppercase">source: {SOURCE}</span>
+                </div>
+                <div class="p-4 min-h-[320px]">
+                    {#if loadingHistory}
+                        <div class="flex justify-center py-16"><span class="loading loading-spinner loading-lg text-primary"></span></div>
+                    {:else if chartPoints.length === 0}
+                        <div class="flex flex-col items-center justify-center py-16 opacity-30 gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
+                            <span class="text-[10px] font-mono uppercase tracking-widest">No data for this range</span>
+                        </div>
+                    {:else}
+                        <EChartsLineChart
+                            points={chartPoints}
+                            height={320}
+                            materialCost={materialCost != null && craftTree != null
+                                ? materialCost / ((craftTree.output_qty ?? 1) * batchSize)
+                                : null}
+                        />
+                    {/if}
+                </div>
             </div>
         </div>
+
+        <!-- Bottom: recipe full width -->
+        {#if hasRecipe === false}
+            <div class="card bg-base-100 border border-base-200 shadow-sm">
+                <div class="card-body p-4 opacity-40 text-sm font-mono">No crafting recipe for this item.</div>
+            </div>
+        {:else if craftTree}
+            <RecipeCard
+                {craftTree}
+                {batchSize}
+                {nodeOverrides}
+                {inventory}
+                materialCost={materialCost ?? 0}
+                {profit}
+                onBatchChange={handleBatchChange}
+                onToggleMode={handleToggleMode}
+                onToggleExpand={handleToggleExpand}
+                onSetInventory={handleSetInventory}
+            />
+        {/if}
+    </div>
     {/if}
 </div>

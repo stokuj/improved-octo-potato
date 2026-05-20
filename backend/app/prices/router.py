@@ -1,12 +1,15 @@
 from datetime import datetime
 from enum import StrEnum
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.auth.dependencies import current_user
 from app.config.db import get_async_session
+from app.config.rate_limit import limiter
 from app.prices import services
 from app.prices.schemas import PriceBucketRead, PricePointCreate, PricePointRead
+from app.users.models import User
 
 router = APIRouter(prefix="/items", tags=["prices"])
 
@@ -45,9 +48,12 @@ async def read_item_price_history(
     response_model=PricePointRead,
     status_code=201,
 )
+@limiter.limit("60/minute")
 async def create_price_point(
+    request: Request,
     item_id: int,
     data: PricePointCreate,
+    user: User = Depends(current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> PricePointRead:
     point = await services.add_price_point(session, item_id, data)

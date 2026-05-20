@@ -13,11 +13,11 @@ router = APIRouter(prefix="/user-items", tags=["user-items"])
 
 @router.get("/me", response_model=PaginatedItems)
 async def read_my_followed_items(
-    q: str | None = Query(default=None),
+    q: str | None = Query(default=None, max_length=200),
     category: ItemCategory | None = Query(default=None),
     grade: ItemGrade | None = Query(default=None),
-    offset: int = 0,
-    limit: int = 20,
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=200),
     user: User = Depends(current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> PaginatedItems:

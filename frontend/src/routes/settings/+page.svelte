@@ -1,11 +1,11 @@
-<script>
+<script lang="ts">
     import { user, updateProfile } from '$lib/auth.svelte.js';
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
 
     let display_name = $state('');
     let is_private = $state(false);
-    let message = $state({ text: '', type: '' }); // type: 'success' | 'error'
+    let message = $state<{ text: string; type: 'success' | 'error' | '' }>({ text: '', type: '' });
     let isSaving = $state(false);
 
     // Sync data from profile when loaded
@@ -23,8 +23,7 @@
         }
     });
 
-    /** @param {SubmitEvent} e */
-    async function handleSave(e) {
+    async function handleSave(e: SubmitEvent) {
         e.preventDefault();
         isSaving = true;
         message = { text: '', type: '' };
@@ -37,7 +36,7 @@
         if (result.success) {
             message = { text: 'Profile successfully updated!', type: 'success' };
         } else {
-            message = { text: result.message, type: 'error' };
+            message = { text: result.message ?? '', type: 'error' };
         }
         isSaving = false;
         

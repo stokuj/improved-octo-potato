@@ -114,8 +114,10 @@ async def add_price_point(
     )
     session.add(point)
 
-    item.current_price = data.price
-    item.updated_at = utcnow()
+    if item.last_price_at is None or captured_at >= item.last_price_at:
+        item.current_price = data.price
+        item.last_price_at = captured_at
+        item.updated_at = utcnow()
     session.add(item)
 
     await session.commit()
