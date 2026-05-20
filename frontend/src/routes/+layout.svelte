@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { user, checkMe, logout } from '$lib/auth.svelte.js';
@@ -41,6 +41,11 @@
 					<li>
 						<a href="/saved-items" class="font-semibold text-sm hover:text-primary transition-colors">
 							Watchlist
+						</a>
+					</li>
+					<li>
+						<a href="/inventory" class="font-semibold text-sm hover:text-primary transition-colors">
+							Inventory
 						</a>
 					</li>
 					<div class="dropdown dropdown-end ml-1">

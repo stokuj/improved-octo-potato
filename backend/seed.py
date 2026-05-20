@@ -1,12 +1,12 @@
-"""Seed the database with sample items, price history, and crafting recipes."""
+"""Seed the database with ArcheRage crafting items and the Blazing Sunridge Ingot recipe tree."""
 
 import asyncio
 import random
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.config.settings import settings
 from app.crafting.models import Recipe, RecipeIngredient
@@ -18,191 +18,269 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-ITEMS = [
-    # Raw crafting materials (no recipe — leaf nodes)
-    ("Ethereal Dust", ItemCategory.CRAFTING, ItemGrade.GRAND, 3_800),
-    ("Lapis Lazuli", ItemCategory.CRAFTING, ItemGrade.RARE, 12_500),
-    ("Moonstone Shard", ItemCategory.CRAFTING, ItemGrade.ARCANE, 8_200),
-    ("Dragon Scale", ItemCategory.CRAFTING, ItemGrade.HEROIC, 45_000),
-    ("Void Crystal", ItemCategory.CRAFTING, ItemGrade.UNIQUE, 120_000),
-    # Weapons
-    ("Iron Crossbow", ItemCategory.WEAPONS, ItemGrade.GRAND, 14_000),
-    ("Shadow Dagger", ItemCategory.WEAPONS, ItemGrade.RARE, 95_000),
-    ("Storm Lance", ItemCategory.WEAPONS, ItemGrade.ARCANE, 62_000),
-    ("Blazing Sword", ItemCategory.WEAPONS, ItemGrade.HEROIC, 280_000),
-    ("Abyssal Bow", ItemCategory.WEAPONS, ItemGrade.UNIQUE, 380_000),
-    # Armor
-    ("Iron Helm", ItemCategory.ARMOR, ItemGrade.GRAND, 9_500),
-    ("Titan Gauntlets", ItemCategory.ARMOR, ItemGrade.ARCANE, 54_000),
-    ("Shadow Robe", ItemCategory.ARMOR, ItemGrade.RARE, 88_000),
-    ("Aegis Plate", ItemCategory.ARMOR, ItemGrade.HEROIC, 195_000),
-    ("Phantom Boots", ItemCategory.ARMOR, ItemGrade.UNIQUE, 210_000),
-    # Accessories
-    ("Ring of Swiftness", ItemCategory.ACCESSORIES, ItemGrade.RARE, 72_000),
-    ("Amulet of Power", ItemCategory.ACCESSORIES, ItemGrade.HEROIC, 150_000),
-    ("Celestial Earring", ItemCategory.ACCESSORIES, ItemGrade.CELESTIAL, 950_000),
-    # Consumables
-    ("Health Potion (L)", ItemCategory.CONSUMABLES, ItemGrade.GRAND, 1_200),
-    ("Mana Elixir (L)", ItemCategory.CONSUMABLES, ItemGrade.GRAND, 1_800),
-    # Other
-    ("Awakening Stone", ItemCategory.SPECIAL_PRODUCT, ItemGrade.LEGENDARY, 2_500_000),
-    ("Red Lunagem", ItemCategory.LUNAGEM, ItemGrade.RARE, 35_000),
-    ("Blue Lunastone", ItemCategory.LUNASTONE, ItemGrade.ARCANE, 22_000),
-    ("Companion Egg: Fox", ItemCategory.COMPANIONS, ItemGrade.HEROIC, 450_000),
+# (name, base_price) — items to seed price history for (copper values)
+# Approximate ArcheRage market prices; Labour has no market price
+PRICE_SEEDS: list[tuple[str, int]] = [
+    ("Iron Ore", 15),
+    ("Copper Ore", 20),
+    ("Silver Ore", 25),
+    ("Onyx Archeum Essence", 150),
+    ("Azalea", 8),
+    ("Narcissus", 8),
+    ("Mysterious Garden Powder", 500),
+    ("Lotus", 12),
+    ("Oats", 10),
+    ("Antler Coral", 30),
+    ("Anya Pebble", 40),
+    ("Dragon Essence Stabilizer", 800),
+    ("Flaming Log", 200),
+    ("Sunpoint", 1200),
+    ("Turmeric", 6),
+    ("Cactus", 6),
+    ("Sparkling Shell Dust", 90),
+    ("Beechnut", 15),
+    ("Iron Ingot", 50),
+    ("Copper Ingot", 65),
+    ("Silver Ingot", 80),
+    ("Opaque Polish", 450),
+    ("Sturdy Ingot", 1200),
+    ("Rough Polish", 2000),
+    ("Anya Ingot", 130),
+    ("Sunridge Ingot", 9000),
+    ("Rainbow Polish", 4500),
+    ("Blazing Sunridge Ingot", 21450),
 ]
 
-# (output_name, output_qty, [(ingredient_name, qty), ...])
-# Costs verified: all craftable items have positive profit margin
+
+def _price_history(
+    base: int, seed: int, days: int = 30, points_per_day: int = 4
+) -> list[tuple[datetime, int]]:
+    """Generate price history with realistic random walk (±8% per step)."""
+    rng = random.Random(seed)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    step = timedelta(hours=24 // points_per_day)
+    total = days * points_per_day
+    result = []
+    price = base
+    for i in range(total, 0, -1):
+        ts = now - step * i
+        noise = rng.uniform(-0.08, 0.08)
+        price = max(1, round(price * (1 + noise)))
+        result.append((ts, price))
+    return result
+
+
+# (name, category, grade)
+# current_price=None — prices come in via the ingest pipeline
+ITEMS: list[tuple[str, ItemCategory, ItemGrade]] = [
+    # ── Leaf nodes (raw materials / purchased) ──────────────────────────────
+    ("Iron Ore", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Copper Ore", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Silver Ore", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Onyx Archeum Essence", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Azalea", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Narcissus", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Labour", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Mysterious Garden Powder", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Lotus", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Oats", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Antler Coral", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Anya Pebble", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Dragon Essence Stabilizer", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Flaming Log", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Sunpoint", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Turmeric", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Cactus", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Sparkling Shell Dust", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Beechnut", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    # ── Crafted intermediates ───────────────────────────────────────────────
+    ("Iron Ingot", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Copper Ingot", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Silver Ingot", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Opaque Polish", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Sturdy Ingot", ItemCategory.CRAFTING, ItemGrade.GRAND),
+    ("Rough Polish", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Anya Ingot", ItemCategory.CRAFTING, ItemGrade.BASIC),
+    ("Sunridge Ingot", ItemCategory.CRAFTING, ItemGrade.GRAND),
+    ("Rainbow Polish", ItemCategory.CRAFTING, ItemGrade.GRAND),
+    # ── Final product ───────────────────────────────────────────────────────
+    ("Blazing Sunridge Ingot", ItemCategory.CRAFTING, ItemGrade.RARE),
+]
+
+# (output_item, output_qty, [(ingredient_item, qty), ...])
+# Quantities are per single craft run.
+# Sunridge Ingot: output=10 derived from tree ratios (80 needed / 8 crafts).
 RECIPES: list[tuple[str, int, list[tuple[str, int]]]] = [
-    # Grand tier — cheap entry-level crafting
-    ("Iron Crossbow", 1, [("Ethereal Dust", 3)]),  # cost 11400, profit 2600
-    ("Iron Helm", 1, [("Ethereal Dust", 2)]),  # cost 7600,  profit 1900
+    ("Iron Ingot", 1, [("Iron Ore", 3)]),
+    ("Copper Ingot", 1, [("Copper Ore", 3)]),
+    ("Silver Ingot", 1, [("Silver Ore", 3)]),
     (
-        "Health Potion (L)",
+        "Opaque Polish",
+        1,
+        [
+            ("Onyx Archeum Essence", 3),
+            ("Azalea", 20),
+            ("Narcissus", 20),
+            ("Labour", 15),
+        ],
+    ),
+    (
+        "Sturdy Ingot",
+        1,
+        [
+            ("Iron Ingot", 8),
+            ("Copper Ingot", 1),
+            ("Silver Ingot", 1),
+            ("Opaque Polish", 1),
+            ("Labour", 10),
+        ],
+    ),
+    (
+        "Rough Polish",
+        1,
+        [
+            ("Onyx Archeum Essence", 5),
+            ("Lotus", 30),
+            ("Oats", 30),
+            ("Antler Coral", 20),
+            ("Labour", 30),
+        ],
+    ),
+    ("Anya Ingot", 1, [("Anya Pebble", 3)]),
+    # output=10 per craft; 8 crafts → 80 Sunridge Ingots needed by parent
+    (
+        "Sunridge Ingot",
         10,
-        [("Ethereal Dust", 2)],
-    ),  # cost 7600 → 10 pots, profit 4400
-    # Rare tier
+        [
+            ("Sturdy Ingot", 100),
+            ("Mysterious Garden Powder", 50),
+            ("Rough Polish", 10),
+            ("Labour", 300),
+            ("Anya Ingot", 9),
+            ("Dragon Essence Stabilizer", 25),
+            ("Flaming Log", 6),
+        ],
+    ),
     (
-        "Shadow Dagger",
+        "Rainbow Polish",
         1,
-        [("Lapis Lazuli", 2), ("Ethereal Dust", 8)],
-    ),  # cost 55400, profit 39600
+        [
+            ("Dragon Essence Stabilizer", 3),
+            ("Turmeric", 50),
+            ("Cactus", 50),
+            ("Sparkling Shell Dust", 10),
+            ("Beechnut", 10),
+        ],
+    ),
     (
-        "Ring of Swiftness",
-        1,
-        [("Lapis Lazuli", 3), ("Ethereal Dust", 5)],
-    ),  # cost 56500, profit 15500
-    # Arcane tier
-    (
-        "Storm Lance",
-        1,
-        [("Moonstone Shard", 4), ("Lapis Lazuli", 1)],
-    ),  # cost 45300, profit 16700
-    (
-        "Titan Gauntlets",
-        1,
-        [("Moonstone Shard", 3), ("Ethereal Dust", 2)],
-    ),  # cost 32200, profit 21800
-    # Heroic tier
-    (
-        "Blazing Sword",
-        1,
-        [("Dragon Scale", 3), ("Lapis Lazuli", 4)],
-    ),  # cost 185000, profit 95000
-    (
-        "Aegis Plate",
-        1,
-        [("Dragon Scale", 2), ("Lapis Lazuli", 3)],
-    ),  # cost 127500, profit 67500
-    (
-        "Amulet of Power",
-        1,
-        [("Dragon Scale", 1), ("Moonstone Shard", 2), ("Lapis Lazuli", 3)],
-    ),  # cost 98900, profit 51100
-    # Unique tier — tight margin
-    (
-        "Abyssal Bow",
-        1,
-        [("Void Crystal", 2), ("Dragon Scale", 2), ("Moonstone Shard", 5)],
-    ),  # cost 371000, profit 9000
-    # Celestial — nested crafting: Ring of Swiftness (itself craftable) is an ingredient
-    (
-        "Celestial Earring",
-        1,
-        [("Ring of Swiftness", 1), ("Void Crystal", 2), ("Dragon Scale", 1)],
-    ),  # cost 357000, profit 593000
+        "Blazing Sunridge Ingot",
+        8,
+        [
+            ("Sunridge Ingot", 80),
+            ("Sunpoint", 50),
+            ("Rainbow Polish", 15),
+            ("Labour", 500),
+        ],
+    ),
 ]
 
 
-def make_price_history(
-    item_id: int, current_price: int, days: int = 30
-) -> list[PricePoint]:
-    points = []
-    now = utcnow()
-    price = current_price
-    for d in range(days, 0, -1):
-        for hour in [6, 12, 18, 23]:
-            jitter = random.uniform(-0.04, 0.04)
-            price = max(1, int(price * (1 + jitter)))
-            captured = now - timedelta(days=d) + timedelta(hours=hour)
-            points.append(
-                PricePoint(
-                    item_id=item_id,
-                    source="ah",
-                    price=price,
-                    captured_at=captured,
+async def seed(session: AsyncSession) -> None:
+    # ── Items ────────────────────────────────────────────────────────────────
+    existing = {item.name for item in (await session.exec(select(Item))).all()}
+    name_to_id: dict[str, int] = {
+        item.name: item.id
+        for item in (await session.exec(select(Item))).all()
+        if item.id is not None
+    }
+
+    new_items = [
+        Item(name=name, category=cat, grade=grade)
+        for name, cat, grade in ITEMS
+        if name not in existing
+    ]
+    if new_items:
+        print(f"Seeding {len(new_items)} items...")
+        for item in new_items:
+            session.add(item)
+        await session.flush()
+        for item in new_items:
+            if item.id is not None:
+                name_to_id[item.name] = item.id
+        print(f"  ✓ {len(new_items)} items inserted")
+    else:
+        print("Items already seeded — skipping.")
+
+    # ── Recipes ──────────────────────────────────────────────────────────────
+    existing_recipes = await session.exec(select(Recipe).limit(1))
+    if existing_recipes.first() is not None:
+        print("Recipes already seeded — skipping.")
+    else:
+        print(f"Seeding {len(RECIPES)} recipes...")
+        for output_name, output_qty, ingredients in RECIPES:
+            item_id = name_to_id.get(output_name)
+            if item_id is None:
+                print(f"  ! Item not found: {output_name!r} — skipping")
+                continue
+
+            recipe = Recipe(item_id=item_id, output_qty=output_qty)
+            session.add(recipe)
+            await session.flush()
+
+            for ing_name, qty in ingredients:
+                ing_id = name_to_id.get(ing_name)
+                if ing_id is None:
+                    print(f"  ! Ingredient not found: {ing_name!r} — skipping")
+                    continue
+                session.add(
+                    RecipeIngredient(
+                        recipe_id=recipe.id,
+                        ingredient_item_id=ing_id,
+                        quantity=qty,
+                    )
                 )
+
+        await session.commit()
+        print(f"  ✓ {len(RECIPES)} recipes inserted")
+
+    # ── Price history ─────────────────────────────────────────────────────────
+    existing_prices = await session.exec(select(PricePoint).limit(1))
+    if existing_prices.first() is not None:
+        print("Price history already seeded — skipping.")
+        return  # nothing left after this section
+
+    print("Seeding price history (30 days, 4 points/day per item)...")
+    total_points = 0
+    for item_name, base_price in PRICE_SEEDS:
+        item_id = name_to_id.get(item_name)
+        if item_id is None:
+            continue
+        history = _price_history(base_price, seed=item_id)
+        last_price = history[-1][1]
+        for ts, price in history:
+            session.add(
+                PricePoint(item_id=item_id, source="ah", price=price, captured_at=ts)
             )
-    return points
+        # Update current_price on the item
+        result = await session.exec(select(Item).where(Item.id == item_id))
+        db_item = result.first()
+        if db_item:
+            db_item.current_price = last_price
+        total_points += len(history)
+
+    await session.commit()
+    print(f"  ✓ {total_points} price points inserted")
 
 
-async def seed():
-    engine = create_async_engine(settings.async_database_url, echo=False)
-    session_maker = async_sessionmaker(
+async def main() -> None:
+    engine = create_async_engine(settings.async_database_url)
+    async_session = async_sessionmaker(
         engine, class_=AsyncSession, expire_on_commit=False
     )
-
-    async with session_maker() as session:
-        # ── Items ──────────────────────────────────────────────────────────
-        existing_items = await session.exec(select(Item).limit(1))
-        if existing_items.first() is None:
-            print(f"Seeding {len(ITEMS)} items with 30 days of price history...")
-            random.seed(42)
-
-            for name, category, grade, price in ITEMS:
-                item = Item(
-                    name=name, category=category, grade=grade, current_price=price
-                )
-                session.add(item)
-                await session.flush()
-                for point in make_price_history(item.id, price):
-                    session.add(point)
-
-            await session.commit()
-            print(f"  ✓ {len(ITEMS)} items inserted")
-        else:
-            print("Items already seeded — skipping items.")
-
-        # ── Recipes ────────────────────────────────────────────────────────
-        existing_recipes = await session.exec(select(Recipe).limit(1))
-        if existing_recipes.first() is None:
-            print(f"Seeding {len(RECIPES)} crafting recipes...")
-
-            # Build name→id lookup
-            all_items_result = await session.exec(select(Item))
-            name_to_id = {item.name: item.id for item in all_items_result.all()}
-
-            for output_name, output_qty, ingredients in RECIPES:
-                output_id = name_to_id.get(output_name)
-                if output_id is None:
-                    print(f"  ! Item not found: {output_name!r} — skipping recipe")
-                    continue
-
-                recipe = Recipe(item_id=output_id, output_qty=output_qty)
-                session.add(recipe)
-                await session.flush()
-
-                for ing_name, qty in ingredients:
-                    ing_id = name_to_id.get(ing_name)
-                    if ing_id is None:
-                        print(f"  ! Ingredient not found: {ing_name!r} — skipping")
-                        continue
-                    session.add(
-                        RecipeIngredient(
-                            recipe_id=recipe.id,
-                            ingredient_item_id=ing_id,
-                            quantity=qty,
-                        )
-                    )
-
-            await session.commit()
-            print(f"  ✓ {len(RECIPES)} recipes inserted")
-        else:
-            print("Recipes already seeded — skipping recipes.")
-
+    async with async_session() as session:
+        await seed(session)
     await engine.dispose()
 
 
 if __name__ == "__main__":
-    asyncio.run(seed())
+    asyncio.run(main())

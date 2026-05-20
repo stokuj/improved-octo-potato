@@ -21,6 +21,7 @@ class CraftNode(BaseModel):
     total_cost: int
     can_craft: bool
     crafts_possible: int | None
+    output_qty: int | None = None  # recipe output per craft; None for leaf nodes
     ingredients: list["CraftNode"] = []
 
 
@@ -33,7 +34,7 @@ class CraftResult(BaseModel):
     output_qty: int
     multiplier: int
     market_price: int | None
-    profit_per_craft: int | None
+    batch_profit: int | None
     total_material_cost: int
     has_missing_prices: bool  # True if any ingredient has current_price=None
     ingredients: list[CraftNode]
@@ -45,4 +46,4 @@ class CraftSummary(BaseModel):
     output_qty: int
     total_material_cost: int
     market_price: int | None
-    profit_per_craft: int | None
+    batch_profit: int | None

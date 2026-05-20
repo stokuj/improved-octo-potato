@@ -1,4 +1,5 @@
 import uuid
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import and_, col, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -24,7 +25,7 @@ async def get_followed_items(
     )
 
     if q is not None:
-        statement = statement.where(col(Item.name).contains(q))
+        statement = statement.where(col(Item.name).ilike(f"%{q}%"))
     if category is not None:
         statement = statement.where(Item.category == category)
     if grade is not None:
@@ -67,20 +68,15 @@ async def follow_item(session: AsyncSession, user_id: uuid.UUID, item_id: int) -
     if item is None:
         raise NotFoundError("Item not found")
 
-    result = await session.exec(
-        select(UserItem).where(
-            and_(UserItem.user_id == user_id, UserItem.item_id == item_id)
-        )
+    stmt = (
+        pg_insert(UserItem)
+        .values(user_id=user_id, item_id=item_id)
+        .on_conflict_do_nothing()
     )
-    existing = result.one_or_none()
-
-    if existing is not None:
-        return False
-
-    user_item = UserItem(user_id=user_id, item_id=item_id)
-    session.add(user_item)
-    await session.commit()
-    return True
+    result = await session.exec(stmt)  # type: ignore[arg-type]
+    if result.rowcount:
+        await session.commit()
+    return result.rowcount == 1
 
 
 async def unfollow_item(

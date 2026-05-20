@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import { login, register, user } from '$lib/auth.svelte.js';
 
     let activeTab = $state('login'); // 'login' or 'register'
@@ -7,8 +7,7 @@
     let errorMessage = $state('');
     let isLoading = $state(false);
 
-    /** @param {SubmitEvent} e */
-    async function handleSubmit(e) {
+    async function handleSubmit(e: SubmitEvent) {
         e.preventDefault();
         isLoading = true;
         errorMessage = '';
@@ -17,7 +16,7 @@
         const result = await action(email, password);
 
         if (!result.success) {
-            errorMessage = result.message;
+            errorMessage = result.message ?? '';
         }
         isLoading = false;
     }

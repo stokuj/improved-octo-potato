@@ -1,4 +1,5 @@
 import os
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -27,15 +28,14 @@ async def db_session():
 
 
 async def test_match_or_create_returns_existing_item(db_session: AsyncSession):
-    existing = Item(
-        name="Egg", category=ItemCategory.CONSUMABLES, grade=ItemGrade.GRAND
-    )
+    name = f"Egg-{uuid.uuid4().hex[:6]}"
+    existing = Item(name=name, category=ItemCategory.CONSUMABLES, grade=ItemGrade.GRAND)
     db_session.add(existing)
     await db_session.commit()
     await db_session.refresh(existing)
 
     item, created = await match_or_create_item(
-        db_session, name="Egg", grade=ItemGrade.GRAND
+        db_session, name=name, grade=ItemGrade.GRAND
     )
 
     assert created is False
@@ -43,13 +43,14 @@ async def test_match_or_create_returns_existing_item(db_session: AsyncSession):
 
 
 async def test_match_or_create_creates_when_missing(db_session: AsyncSession):
+    name = f"Unknown-{uuid.uuid4().hex[:6]}"
     item, created = await match_or_create_item(
-        db_session, name="Unknown Thing", grade=ItemGrade.RARE
+        db_session, name=name, grade=ItemGrade.RARE
     )
 
     assert created is True
     assert item.id is not None
-    assert item.name == "Unknown Thing"
+    assert item.name == name
     assert item.grade == ItemGrade.RARE
     assert item.category == ItemCategory.OTHER
 
@@ -57,7 +58,8 @@ async def test_match_or_create_creates_when_missing(db_session: AsyncSession):
 async def test_bulk_ingest_creates_pricepoint_for_existing_item(
     db_session: AsyncSession,
 ):
-    item = Item(name="Egg", category=ItemCategory.CONSUMABLES, grade=ItemGrade.GRAND)
+    name = f"Egg-{uuid.uuid4().hex[:6]}"
+    item = Item(name=name, category=ItemCategory.CONSUMABLES, grade=ItemGrade.GRAND)
     db_session.add(item)
     await db_session.commit()
     await db_session.refresh(item)
@@ -65,7 +67,7 @@ async def test_bulk_ingest_creates_pricepoint_for_existing_item(
     req = IngestRequest(
         rows=[
             PriceIngestRow(
-                name="Egg",
+                name=name,
                 grade=1,
                 price=15000,
                 ts=datetime.now(timezone.utc),
@@ -82,10 +84,11 @@ async def test_bulk_ingest_creates_pricepoint_for_existing_item(
 
 
 async def test_bulk_ingest_auto_creates_unknown_item(db_session: AsyncSession):
+    name = f"Fresh-{uuid.uuid4().hex[:6]}"
     req = IngestRequest(
         rows=[
             PriceIngestRow(
-                name="Fresh New Item",
+                name=name,
                 grade=2,
                 price=42,
                 ts=datetime.now(timezone.utc),
@@ -98,7 +101,7 @@ async def test_bulk_ingest_auto_creates_unknown_item(db_session: AsyncSession):
     assert report.accepted == 1
     assert report.auto_created == 1
 
-    result = await db_session.exec(select(Item).where(Item.name == "Fresh New Item"))
+    result = await db_session.exec(select(Item).where(Item.name == name))
     created = result.first()
     assert created is not None
     assert created.grade == ItemGrade.RARE
@@ -106,17 +109,18 @@ async def test_bulk_ingest_auto_creates_unknown_item(db_session: AsyncSession):
 
 
 async def test_bulk_ingest_skips_future_ts(db_session: AsyncSession):
+    uid = uuid.uuid4().hex[:6]
     req = IngestRequest(
         rows=[
             PriceIngestRow(
-                name="Good",
+                name=f"Good-{uid}",
                 grade=1,
                 price=100,
                 ts=datetime.now(timezone.utc),
                 source="ah",
             ),
             PriceIngestRow(
-                name="Bad",
+                name=f"Bad-{uid}",
                 grade=1,
                 price=100,
                 ts=datetime.now(timezone.utc) + timedelta(hours=2),

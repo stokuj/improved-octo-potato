@@ -12,11 +12,11 @@ router = APIRouter(prefix="/items", tags=["items"])
 
 @router.get("/", response_model=PaginatedItems)
 async def read_items(
-    q: str | None = Query(default=None),
+    q: str | None = Query(default=None, max_length=200),
     category: ItemCategory | None = Query(default=None),
     grade: ItemGrade | None = Query(default=None),
-    offset: int = 0,
-    limit: int = 20,
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=200),
     session: AsyncSession = Depends(get_async_session),
 ) -> PaginatedItems:
     return await services.get_items(

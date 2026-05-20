@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from enum import StrEnum
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, UniqueConstraint
 
 
 def utcnow() -> datetime:
@@ -41,6 +41,8 @@ class ItemGrade(StrEnum):
 
 
 class Item(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("name", "grade", name="uq_item_name_grade"),)
+
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(index=True, max_length=120)
     category: ItemCategory = Field(default=ItemCategory.OTHER, index=True)
@@ -48,3 +50,4 @@ class Item(SQLModel, table=True):
     current_price: int | None = Field(default=None, ge=0)
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
+    last_price_at: datetime | None = Field(default=None, nullable=True)

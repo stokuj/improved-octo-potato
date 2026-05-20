@@ -24,6 +24,7 @@ from app.user_items.models import UserItem  # noqa: F401
 from app.users.models import User  # noqa: F401
 from app.crafting.models import Recipe  # noqa: F401
 from app.crafting.models import RecipeIngredient  # noqa: F401
+from app.user_inventory.models import UserInventory  # noqa: F401
 from app.main import app
 
 _TEST_URL = os.environ["ASYNC_DATABASE_URL"]

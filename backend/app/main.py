@@ -15,6 +15,7 @@ from app.ingest.router import router as ingest_router
 from app.items.router import router as items_router
 from app.prices.router import router as prices_router
 from app.profiles.router import router as profiles_router
+from app.user_inventory.router import router as inventory_router
 from app.user_items.router import router as user_items_router
 from app.users.router import router as users_router
 
@@ -46,6 +47,7 @@ api.include_router(profiles_router)
 api.include_router(items_router)
 api.include_router(prices_router)
 api.include_router(user_items_router)
+api.include_router(inventory_router)
 api.include_router(crafting_router)
 api.include_router(ingest_router)
 app.include_router(api)

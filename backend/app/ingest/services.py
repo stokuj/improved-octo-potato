@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy import func
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -18,21 +20,40 @@ from app.prices.services import add_price_point
 async def match_or_create_item(
     session: AsyncSession, name: str, grade: ItemGrade
 ) -> tuple[Item, bool]:
-    """Find Item by exact name+grade, create with category=OTHER if missing.
+    """Find Item by name (case-insensitive, trimmed) + grade. Creates with category=OTHER if missing.
 
-    Returns (item, created) where created=True if a new Item was inserted.
+    Returns (item, created) where created=True if a new row was inserted.
     """
-    query = select(Item).where(Item.name == name, Item.grade == grade)
-    result = await session.exec(query)
+    name_clean = name.strip()
+
+    result = await session.exec(
+        select(Item).where(
+            func.lower(Item.name) == name_clean.lower(), Item.grade == grade
+        )
+    )
     item = result.first()
     if item is not None:
         return item, False
 
-    item = Item(name=name, grade=grade, category=ItemCategory.OTHER)
-    session.add(item)
+    # Atomic insert — ON CONFLICT handles concurrent ingest for the same item
+    stmt = (
+        pg_insert(Item)
+        .values(name=name_clean, grade=grade, category=ItemCategory.OTHER)
+        .on_conflict_do_nothing(constraint="uq_item_name_grade")
+    )
+    result2 = await session.execute(stmt)
+    created = result2.rowcount > 0
     await session.commit()
-    await session.refresh(item)
-    return item, True
+
+    # Re-fetch whether we inserted or lost the race
+    item = (
+        await session.exec(
+            select(Item).where(
+                func.lower(Item.name) == name_clean.lower(), Item.grade == grade
+            )
+        )
+    ).one()
+    return item, created
 
 
 def _normalize_ts(ts: datetime) -> datetime:

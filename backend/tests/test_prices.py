@@ -1,3 +1,4 @@
+import uuid
 import pytest
 from datetime import datetime, timezone
 from httpx import AsyncClient
@@ -21,10 +22,26 @@ async def db_session():
     await engine.dispose()
 
 
+def _email() -> str:
+    return f"price-{uuid.uuid4().hex[:8]}@test.com"
+
+
+@pytest.fixture()
+async def auth_client(client: AsyncClient) -> AsyncClient:
+    email = _email()
+    await client.post(
+        "/api/auth/register", json={"email": email, "password": "password123"}
+    )
+    await client.post(
+        "/api/auth/login", data={"username": email, "password": "password123"}
+    )
+    return client
+
+
 @pytest.fixture()
 async def price_item(db_session: AsyncSession) -> Item:
     item = Item(
-        name="Price Test Item",
+        name=f"Price-Item-{uuid.uuid4().hex[:6]}",
         category=ItemCategory.CONSUMABLES,
         grade=ItemGrade.GRAND,
     )
@@ -35,9 +52,9 @@ async def price_item(db_session: AsyncSession) -> Item:
 
 
 async def test_post_price_point_returns_201(
-    client: AsyncClient, price_item: Item
+    auth_client: AsyncClient, price_item: Item
 ) -> None:
-    resp = await client.post(
+    resp = await auth_client.post(
         f"/api/items/{price_item.id}/prices",
         json={
             "source": "market",
@@ -51,10 +68,22 @@ async def test_post_price_point_returns_201(
     assert data["source"] == "market"
 
 
+async def test_post_price_requires_auth(client: AsyncClient, price_item: Item) -> None:
+    resp = await client.post(
+        f"/api/items/{price_item.id}/prices",
+        json={
+            "source": "market",
+            "price": 100,
+            "captured_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+    assert resp.status_code == 401
+
+
 async def test_post_price_updates_current_price(
-    client: AsyncClient, price_item: Item, db_session: AsyncSession
+    auth_client: AsyncClient, price_item: Item, db_session: AsyncSession
 ) -> None:
-    await client.post(
+    await auth_client.post(
         f"/api/items/{price_item.id}/prices",
         json={
             "source": "market",
@@ -76,8 +105,10 @@ async def test_post_price_updates_current_price(
         await engine.dispose()
 
 
-async def test_post_price_for_missing_item_returns_404(client: AsyncClient) -> None:
-    resp = await client.post(
+async def test_post_price_for_missing_item_returns_404(
+    auth_client: AsyncClient,
+) -> None:
+    resp = await auth_client.post(
         "/api/items/99999999/prices",
         json={
             "source": "market",
@@ -88,8 +119,10 @@ async def test_post_price_for_missing_item_returns_404(client: AsyncClient) -> N
     assert resp.status_code == 404
 
 
-async def test_get_price_history_raw(client: AsyncClient, price_item: Item) -> None:
-    await client.post(
+async def test_get_price_history_raw(
+    auth_client: AsyncClient, price_item: Item
+) -> None:
+    await auth_client.post(
         f"/api/items/{price_item.id}/prices",
         json={
             "source": "auction",
@@ -97,7 +130,7 @@ async def test_get_price_history_raw(client: AsyncClient, price_item: Item) -> N
             "captured_at": "2026-01-01T12:00:00Z",
         },
     )
-    resp = await client.get(
+    resp = await auth_client.get(
         f"/api/items/{price_item.id}/price-history",
         params={"source": "auction", "interval": "raw"},
     )
@@ -109,7 +142,7 @@ async def test_get_price_history_raw(client: AsyncClient, price_item: Item) -> N
 
 
 async def test_get_price_history_1h_buckets(
-    client: AsyncClient, price_item: Item
+    auth_client: AsyncClient, price_item: Item
 ) -> None:
     # Two points in the same hour bucket, one in a different hour
     for ts, price in [
@@ -117,12 +150,12 @@ async def test_get_price_history_1h_buckets(
         ("2026-03-01T10:45:00Z", 2000),  # same bucket as above
         ("2026-03-01T11:10:00Z", 3000),  # next bucket
     ]:
-        await client.post(
+        await auth_client.post(
             f"/api/items/{price_item.id}/prices",
             json={"source": "market", "price": price, "captured_at": ts},
         )
 
-    resp = await client.get(
+    resp = await auth_client.get(
         f"/api/items/{price_item.id}/price-history",
         params={"source": "market", "interval": "1h"},
     )
@@ -139,19 +172,19 @@ async def test_get_price_history_1h_buckets(
 
 
 async def test_get_price_history_1d_buckets(
-    client: AsyncClient, price_item: Item
+    auth_client: AsyncClient, price_item: Item
 ) -> None:
     for ts, price in [
         ("2026-03-01T08:00:00Z", 100),
         ("2026-03-01T20:00:00Z", 200),
         ("2026-03-02T08:00:00Z", 300),
     ]:
-        await client.post(
+        await auth_client.post(
             f"/api/items/{price_item.id}/prices",
             json={"source": "daily", "price": price, "captured_at": ts},
         )
 
-    resp = await client.get(
+    resp = await auth_client.get(
         f"/api/items/{price_item.id}/price-history",
         params={"source": "daily", "interval": "1d"},
     )
@@ -166,19 +199,19 @@ async def test_get_price_history_1d_buckets(
 
 
 async def test_get_price_history_date_filter(
-    client: AsyncClient, price_item: Item
+    auth_client: AsyncClient, price_item: Item
 ) -> None:
     for ts, price in [
         ("2026-01-01T00:00:00Z", 111),
         ("2026-06-01T00:00:00Z", 222),
         ("2026-12-01T00:00:00Z", 333),
     ]:
-        await client.post(
+        await auth_client.post(
             f"/api/items/{price_item.id}/prices",
             json={"source": "filter_test", "price": price, "captured_at": ts},
         )
 
-    resp = await client.get(
+    resp = await auth_client.get(
         f"/api/items/{price_item.id}/price-history",
         params={
             "source": "filter_test",

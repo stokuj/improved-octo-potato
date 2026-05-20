@@ -8,8 +8,9 @@
 		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch"
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"gen:types": "openapi-typescript http://localhost:8000/openapi.json -o src/lib/api.d.ts"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^7.0.1",
