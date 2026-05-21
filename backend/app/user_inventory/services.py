@@ -4,7 +4,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import and_, col, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.config.exceptions import AppError, NotFoundError
+from app.config.exceptions import NotFoundError
 from app.crafting.calculator import build_craft_tree
 from app.crafting.services import load_all_items, load_all_recipes
 from app.items.models import Item
@@ -77,15 +77,16 @@ async def get_inventory_for_recipe(
     session: AsyncSession, user_id: uuid.UUID, item_id: int
 ) -> dict[int, int]:
     """Return {item_id: quantity} for all ingredients in the recipe tree."""
+    item = await session.get(Item, item_id)
+    if item is None:
+        raise NotFoundError("Item not found")
+
     all_recipes = await load_all_recipes(session)
     if item_id not in all_recipes:
-        return {}
+        return {}  # legitimate: item is a leaf / unrecipeable
 
     all_items = await load_all_items(session)
-    try:
-        tree = build_craft_tree(item_id, 1, {}, all_recipes, all_items)
-    except AppError:
-        return {}
+    tree = build_craft_tree(item_id, 1, {}, all_recipes, all_items)
 
     ingredient_ids = _collect_item_ids(tree.ingredients)
     if not ingredient_ids:

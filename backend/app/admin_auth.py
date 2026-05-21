@@ -43,9 +43,6 @@ class AdminAuth(AuthenticationBackend):
         return False
 
 
-authentication_backend = AdminAuth(secret_key=settings.admin_session_secret)
-
-
 # Wrap login and authenticate to enforce secure session cookie if needed
 # Note: starlette SessionMiddleware uses session cookie
 class SecureAdminAuth(AdminAuth):

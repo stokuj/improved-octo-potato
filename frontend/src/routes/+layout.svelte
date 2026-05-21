@@ -1,13 +1,15 @@
 <script lang="ts">
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
-	import { user, checkMe, logout } from '$lib/auth.svelte.js';
+	import { provideUserState, checkMe, logout } from '$lib/auth.svelte.js';
 	import { onMount } from 'svelte';
+
+	const user = provideUserState();
 
 	let { children } = $props();
 
 	onMount(() => {
-		checkMe();
+		checkMe(user);
 	});
 </script>
 
@@ -60,7 +62,7 @@
 							</li>
 							<li><a href="/settings" class="text-sm">Settings</a></li>
 							<li>
-								<button onclick={logout} class="text-error text-sm border-t border-base-300 mt-1 pt-2 rounded-none">
+								<button onclick={() => logout(user)} class="text-error text-sm border-t border-base-300 mt-1 pt-2 rounded-none">
 									Sign Out
 								</button>
 							</li>

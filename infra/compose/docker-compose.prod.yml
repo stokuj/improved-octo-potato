@@ -20,12 +20,19 @@ services:
     restart: unless-stopped
     command: >
       sh -c "uv run alembic upgrade head &&
-             uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"
+             uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+                    --proxy-headers --forwarded-allow-ips='10.0.0.0/8,172.16.0.0/12,192.168.0.0/16'"
+    expose:
+      - "8000"
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-app}
       ASYNC_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-app}
+      ENVIRONMENT: prod
       AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
       ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:?ADMIN_SESSION_SECRET is required}
+      RESET_TOKEN_SECRET: ${RESET_TOKEN_SECRET:?RESET_TOKEN_SECRET is required}
+      VERIFICATION_TOKEN_SECRET: ${VERIFICATION_TOKEN_SECRET:?VERIFICATION_TOKEN_SECRET is required}
+      INGEST_TOKEN: ${INGEST_TOKEN:?INGEST_TOKEN is required}
       SQL_ECHO: ${SQL_ECHO:-false}
       CORS_ORIGINS: '["https://${APP_DOMAIN}","https://${APP_WWW_DOMAIN}"]'
       COOKIE_SECURE: "true"
@@ -40,6 +47,18 @@ services:
         PUBLIC_API_URL: https://${APP_DOMAIN}/api
     restart: unless-stopped
 
+  discord_bot:
+    build: ../../discord_bot
+    restart: unless-stopped
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN:?DISCORD_TOKEN is required}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
+      INGEST_TOKEN: ${INGEST_TOKEN:?INGEST_TOKEN is required}
+      API_URL: http://backend:8000/api
+    depends_on:
+      backend:
+        condition: service_started
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -53,6 +72,7 @@ services:
     environment:
       APP_DOMAIN: ${APP_DOMAIN:?APP_DOMAIN is required}
       APP_WWW_DOMAIN: ${APP_WWW_DOMAIN:?APP_WWW_DOMAIN is required}
+      ADMIN_ALLOWED_IPS: ${ADMIN_ALLOWED_IPS:?ADMIN_ALLOWED_IPS is required (set to a CIDR list or 0.0.0.0/0 to allow public)}
     depends_on:
       - backend
       - frontend

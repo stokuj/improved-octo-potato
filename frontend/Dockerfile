@@ -21,6 +21,9 @@ COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/build ./build
 
+RUN chown -R node:node /app
+USER node
+
 EXPOSE 3000
 
 # Run with node adapter

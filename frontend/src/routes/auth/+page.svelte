@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { login, register, user } from '$lib/auth.svelte.js';
+    import { login, register, getUserState } from '$lib/auth.svelte.js';
+
+    const user = getUserState();
 
     let activeTab = $state('login'); // 'login' or 'register'
     let email = $state('');
@@ -13,7 +15,7 @@
         errorMessage = '';
 
         const action = activeTab === 'login' ? login : register;
-        const result = await action(email, password);
+        const result = await action(user, email, password);
 
         if (!result.success) {
             errorMessage = result.message ?? '';

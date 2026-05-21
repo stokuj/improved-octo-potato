@@ -1,7 +1,9 @@
 <script lang="ts">
-    import { user, updateProfile } from '$lib/auth.svelte.js';
+    import { getUserState, updateProfile } from '$lib/auth.svelte.js';
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
+
+    const user = getUserState();
 
     let display_name = $state('');
     let is_private = $state(false);
@@ -28,7 +30,7 @@
         isSaving = true;
         message = { text: '', type: '' };
 
-        const result = await updateProfile({
+        const result = await updateProfile(user, {
             display_name,
             is_private
         });

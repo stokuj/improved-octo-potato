@@ -1,6 +1,6 @@
 import uuid
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlmodel import and_, col, func, select
+from sqlmodel import and_, col, delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.config.exceptions import NotFoundError
@@ -82,13 +82,15 @@ async def follow_item(session: AsyncSession, user_id: uuid.UUID, item_id: int) -
 async def unfollow_item(
     session: AsyncSession, user_id: uuid.UUID, item_id: int
 ) -> None:
-    result = await session.exec(
-        select(UserItem).where(
+    """Idempotent unfollow: silent no-op when row absent.
+
+    Single round-trip atomic DELETE — avoids the SELECT-then-DELETE race.
+    Router (`DELETE /user-items/{item_id}`) returns 204 unconditionally, so
+    a missing follow does not need to raise 404.
+    """
+    await session.exec(  # type: ignore[call-overload]
+        delete(UserItem).where(
             and_(UserItem.user_id == user_id, UserItem.item_id == item_id)
         )
     )
-    relation = result.one_or_none()
-
-    if relation is not None:
-        await session.delete(relation)
-        await session.commit()
+    await session.commit()

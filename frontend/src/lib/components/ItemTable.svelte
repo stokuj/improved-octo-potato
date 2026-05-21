@@ -1,11 +1,13 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
-    import { user } from '$lib/auth.svelte.js';
+    import { getUserState } from '$lib/auth.svelte.js';
     import { API_BASE_URL } from '$lib/config.js';
     import { gradeColor } from '$lib/grades.js';
     import { splitCurrency } from '$lib/currency.js';
     import type { ItemListItem } from '$lib/types';
+
+    const user = getUserState();
 
     let {
         apiEndpoint = '/items/',

@@ -7,6 +7,8 @@ import httpx
 from discord import Interaction, app_commands
 from discord.ext import commands
 
+from cogs._http import get_http_client
+
 GRADE_CHOICES = [
     app_commands.Choice(name="basic", value=0),
     app_commands.Choice(name="grand", value=1),
@@ -49,12 +51,12 @@ async def lookup_item(api_url: str, name: str, grade_int: int) -> tuple[dict | N
     Raises httpx.HTTPError on network/backend failure.
     """
     grade_str = GRADE_INT_TO_STR[grade_int]
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(
-            f"{api_url}/items/",
-            params={"q": name, "limit": 20},
-        )
-        resp.raise_for_status()
+    client = get_http_client()
+    resp = await client.get(
+        f"{api_url}/items/",
+        params={"q": name, "limit": 20},
+    )
+    resp.raise_for_status()
 
     items: list[dict] = resp.json()["items"]
 
@@ -77,7 +79,13 @@ async def lookup_item(api_url: str, name: str, grade_int: int) -> tuple[dict | N
     return None, suggestions
 
 
-async def post_price(api_url: str, name: str, grade_int: int, price_copper: int) -> None:
+async def post_price(
+    api_url: str,
+    name: str,
+    grade_int: int,
+    price_copper: int,
+    ingest_token: str,
+) -> None:
     """POST one price row to the ingest API.
 
     Raises httpx.HTTPError on network/HTTP failure.
@@ -95,9 +103,13 @@ async def post_price(api_url: str, name: str, grade_int: int, price_copper: int)
             }
         ]
     }
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.post(f"{api_url}/ingest/prices", json=payload)
-        resp.raise_for_status()
+    client = get_http_client()
+    resp = await client.post(
+        f"{api_url}/ingest/prices",
+        json=payload,
+        headers={"Authorization": f"Bearer {ingest_token}"},
+    )
+    resp.raise_for_status()
 
     body = resp.json()
     if body.get("accepted", 0) == 0:
@@ -160,7 +172,13 @@ class PricesCog(commands.Cog):
             return
 
         try:
-            await post_price(self.bot.api_url, item["name"], grade, total)
+            await post_price(
+                self.bot.api_url,
+                item["name"],
+                grade,
+                total,
+                self.bot.ingest_token,
+            )
         except httpx.HTTPError:
             logging.exception("Backend unreachable posting price in /addprice")
             await interaction.followup.send(

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { formatCurrency } from '$lib/currency.js';
-    import { LABOUR_ITEM_NAME } from '$lib/crafting.js';
+    import { LABOUR_ITEM_NAME, computeNodeCost } from '$lib/crafting';
     import type { CraftNode, NodeOverride } from '$lib/types';
 
     let { nodes, batchSize, nodeOverrides, inventory, onToggleMode, onToggleExpand, onSetInventory }: {
@@ -16,20 +16,8 @@
     // Depth colors: L0–L5
     const DEPTH_COLORS = ['#1a1a1a','#3554c8','#1f8a5b','#b5701b','#8a3b6b','#7a786f'];
 
-    function computeNodeCost(node: CraftNode, scale: number): number {
-        const qty = node.qty_needed * scale;
-        const have = inventory[node.item_id] ?? 0;
-        const stillNeed = Math.max(0, qty - have);
-        const override = nodeOverrides[node.item_id];
-        if (override?.mode === 'buy' || !node.can_craft || node.ingredients.length === 0) {
-            return (node.unit_price ?? 0) * stillNeed;
-        }
-        if (stillNeed === 0) return 0;
-        const outputQty = node.output_qty ?? 1;
-        const storedCrafts = Math.ceil(node.qty_needed / outputQty);
-        const desiredCrafts = Math.ceil(stillNeed / outputQty);
-        const childScale = storedCrafts > 0 ? desiredCrafts / storedCrafts : 0;
-        return node.ingredients.reduce((s, c) => s + computeNodeCost(c, childScale), 0);
+    function nodeCost(node: CraftNode, scale: number): number {
+        return computeNodeCost(node, scale, { inventory, nodeOverrides });
     }
 
     function depthColor(depth: number): string {
@@ -42,7 +30,7 @@
     {@const override = nodeOverrides[node.item_id]}
     {@const isBuy = override?.mode === 'buy'}
     {@const isExpanded = override?.expanded ?? (depth < 2)}
-    {@const subtotal = computeNodeCost(node, scale)}
+    {@const subtotal = nodeCost(node, scale)}
     {@const have = inventory[node.item_id] ?? 0}
     {@const stillNeed = Math.max(0, qty - have)}
     {@const color = depthColor(depth)}

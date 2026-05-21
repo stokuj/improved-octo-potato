@@ -80,6 +80,11 @@ def _build_node(
         name = all_items[item_id].name if item_id in all_items else str(item_id)
         raise AppError(f"Cycle detected at '{name}'", status_code=400)
 
+    if item_id not in all_items:
+        raise AppError(
+            f"Ingredient item {item_id} referenced by recipe but not found",
+            status_code=500,
+        )
     item = all_items[item_id]
     unit_price = item.current_price
     total_cost = qty_needed * (unit_price or 0)

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from sqlalchemy import update
 from sqlmodel import and_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -114,11 +115,21 @@ async def add_price_point(
     )
     session.add(point)
 
-    if item.last_price_at is None or captured_at >= item.last_price_at:
-        item.current_price = data.price
-        item.last_price_at = captured_at
-        item.updated_at = utcnow()
-    session.add(item)
+    # Atomic guarded update: only overwrite current_price/last_price_at if the
+    # incoming captured_at is newer-or-equal to the persisted last_price_at.
+    # The WHERE clause runs inside the DB so concurrent writers can't race a
+    # check-then-set. On exact ties the last-arriving statement wins (DB row
+    # lock serializes them); originally last-write-wins on ties too.
+    await session.execute(
+        update(Item)
+        .where(Item.id == item_id)
+        .where((Item.last_price_at.is_(None)) | (Item.last_price_at <= captured_at))
+        .values(
+            current_price=data.price,
+            last_price_at=captured_at,
+            updated_at=utcnow(),
+        )
+    )
 
     await session.commit()
     await session.refresh(point)

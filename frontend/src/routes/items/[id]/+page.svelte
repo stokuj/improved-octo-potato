@@ -2,12 +2,15 @@
     import { onMount } from 'svelte';
     import { page } from '$app/state';
     import { API_BASE_URL } from '$lib/config.js';
-    import { user } from '$lib/auth.svelte.js';
+    import { getUserState } from '$lib/auth.svelte.js';
     import { gradeColor } from '$lib/grades.js';
     import { formatCurrency, splitCurrency } from '$lib/currency.js';
+    import { computeNodeCost } from '$lib/crafting';
     import EChartsLineChart from '$lib/components/charts/EChartsLineChart.svelte';
     import RecipeCard from '$lib/components/crafting/RecipeCard.svelte';
     import type { ItemRead, CraftResult, CraftNode, ChartPoint, NodeOverride } from '$lib/types';
+
+    const user = getUserState();
 
     const SOURCE = 'ah';
     const RANGE_OPTIONS = [
@@ -33,28 +36,10 @@
     let nodeOverrides: Record<number, NodeOverride> = $state({});
     let inventory: Record<number, number> = $state({});
 
-    function computeNodeCost(node: CraftNode, scale: number = batchSize): number {
-        const qty = node.qty_needed * scale;
-        const have = inventory[node.item_id] ?? 0;
-        const stillNeed = Math.max(0, qty - have);
-        const override = nodeOverrides[node.item_id];
-        if (override?.mode === 'buy' || !node.can_craft || node.ingredients.length === 0) {
-            return (node.unit_price ?? 0) * stillNeed;
-        }
-        if (stillNeed === 0) return 0;
-        // Use output_qty to correctly scale children when batchSize produces a different
-        // ceiling than linear multiplication (e.g. qty_needed=11, output_qty=10, batch=2
-        // needs 3 crafts, not 2*2=4).
-        const outputQty = node.output_qty ?? 1;
-        const storedCrafts = Math.ceil(node.qty_needed / outputQty);
-        const desiredCrafts = Math.ceil(stillNeed / outputQty);
-        const childScale = storedCrafts > 0 ? desiredCrafts / storedCrafts : 0;
-        return node.ingredients.reduce((s, c) => s + computeNodeCost(c, childScale), 0);
-    }
-
     const materialCost = $derived.by(() => {
         if (!craftTree) return null;
-        return craftTree.ingredients.reduce((s, n) => s + computeNodeCost(n), 0);
+        const ctx = { inventory, nodeOverrides };
+        return craftTree.ingredients.reduce((s, n) => s + computeNodeCost(n, batchSize, ctx), 0);
     });
 
     const profit = $derived.by(() => {

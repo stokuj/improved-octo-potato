@@ -1,26 +1,36 @@
+{
+    admin off
+}
+
+(security_headers) {
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        # CSP is emitted per-response by SvelteKit (kit.csp). Caddy does not set
+        # script-src here — it would collide with SvelteKit's nonced policy.
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        -Server
+    }
+}
+
 {env.APP_DOMAIN}, {env.APP_WWW_DOMAIN} {
-    # Backend: API routes, admin panel, and API docs
+    import security_headers
+
     handle /api/* {
         reverse_proxy backend:8000
     }
 
     handle /admin* {
+        @denied not remote_ip {env.ADMIN_ALLOWED_IPS}
+        respond @denied "Forbidden" 403
         reverse_proxy backend:8000
     }
 
-    handle /docs* {
-        reverse_proxy backend:8000
-    }
+    # /docs, /redoc, /openapi.json intentionally NOT routed in prod.
+    # FastAPI also disables them when ENVIRONMENT=prod.
 
-    handle /redoc {
-        reverse_proxy backend:8000
-    }
-
-    handle /openapi.json {
-        reverse_proxy backend:8000
-    }
-
-    # Frontend: everything else
     handle {
         reverse_proxy frontend:3000
     }
