@@ -8,7 +8,10 @@ const baseCraftTree = {
   item_id: 1,
   item_name: 'Iron Ingot',
   output_qty: 1,
+  multiplier: 1,
   market_price: 1000,
+  batch_profit: 250,
+  total_material_cost: 750,
   has_missing_prices: false,
   ingredients: [],
 };

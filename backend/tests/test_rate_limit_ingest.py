@@ -1,7 +1,6 @@
 # backend/tests/test_rate_limit_ingest.py
 import uuid
 
-import pytest
 from httpx import AsyncClient
 
 
@@ -11,7 +10,9 @@ def _email() -> str:
 
 async def test_login_returns_429_after_burst(client: AsyncClient) -> None:
     email = _email()
-    await client.post("/api/auth/register", json={"email": email, "password": "pwd123456"})
+    await client.post(
+        "/api/auth/register", json={"email": email, "password": "pwd123456"}
+    )
 
     responses = []
     for _ in range(6):
@@ -56,7 +57,9 @@ async def test_ingest_returns_429_above_threshold(
 
 async def test_limiter_resets_between_tests(client: AsyncClient) -> None:
     email = _email()
-    await client.post("/api/auth/register", json={"email": email, "password": "pwd123456"})
+    await client.post(
+        "/api/auth/register", json={"email": email, "password": "pwd123456"}
+    )
 
     r = await client.post(
         "/api/auth/login", data={"username": email, "password": "pwd123456"}
@@ -66,7 +69,9 @@ async def test_limiter_resets_between_tests(client: AsyncClient) -> None:
 
 async def test_429_payload_shape(client: AsyncClient) -> None:
     email = _email()
-    await client.post("/api/auth/register", json={"email": email, "password": "pwd123456"})
+    await client.post(
+        "/api/auth/register", json={"email": email, "password": "pwd123456"}
+    )
 
     rate_limited = None
     for _ in range(7):

@@ -1,7 +1,6 @@
 # backend/tests/test_inventory_edge.py
 import uuid
 
-import pytest
 from httpx import AsyncClient, ASGITransport
 
 from app.main import app
@@ -31,7 +30,9 @@ async def test_quantity_negative_rejected(sample_item) -> None:
 async def test_quantity_overflow_rejected(sample_item) -> None:
     c = await _auth_client()
     try:
-        r = await c.put(f"/api/inventory/{sample_item.id}", json={"quantity": 10_000_001})
+        r = await c.put(
+            f"/api/inventory/{sample_item.id}", json={"quantity": 10_000_001}
+        )
         assert r.status_code == 422
     finally:
         await c.aclose()

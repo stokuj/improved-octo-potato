@@ -4,9 +4,9 @@
 The throttled wrappers in app/auth/router.py must parse the JSON body
 (per the fastapi-users contract), not interpret parameters as query args.
 """
+
 import uuid
 
-import pytest
 from httpx import AsyncClient
 
 

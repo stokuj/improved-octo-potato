@@ -2,7 +2,6 @@
 import asyncio
 import uuid
 
-import pytest
 from httpx import AsyncClient, ASGITransport
 from sqlmodel import select
 
@@ -27,17 +26,22 @@ async def test_concurrent_upsert_same_item_final_quantity_correct(
 ) -> None:
     c = await _auth_client()
     try:
+
         async def put(q):
             return await c.put(f"/api/inventory/{sample_item.id}", json={"quantity": q})
 
         quantities = [1, 5, 10, 25, 100, 250, 500, 1000, 2500, 5000]
-        results = await asyncio.gather(*[put(q) for q in quantities], return_exceptions=True)
+        results = await asyncio.gather(
+            *[put(q) for q in quantities], return_exceptions=True
+        )
         statuses = [r.status_code for r in results if hasattr(r, "status_code")]
         assert all(s < 500 for s in statuses), statuses
 
         async with session_factory() as s:
             rows = (
-                await s.exec(select(UserInventory).where(UserInventory.item_id == sample_item.id))
+                await s.exec(
+                    select(UserInventory).where(UserInventory.item_id == sample_item.id)
+                )
             ).all()
             assert len(rows) == 1, f"expected single row, got {len(rows)}"
             assert rows[0].quantity in quantities
@@ -56,37 +60,44 @@ async def test_concurrent_set_to_zero_deletes_exactly_once(
         async def delete_zero():
             return await c.put(f"/api/inventory/{sample_item.id}", json={"quantity": 0})
 
-        results = await asyncio.gather(*[delete_zero() for _ in range(5)], return_exceptions=True)
+        results = await asyncio.gather(
+            *[delete_zero() for _ in range(5)], return_exceptions=True
+        )
         statuses = [r.status_code for r in results if hasattr(r, "status_code")]
         assert all(s < 500 for s in statuses), statuses
 
         async with session_factory() as s:
             rows = (
-                await s.exec(select(UserInventory).where(UserInventory.item_id == sample_item.id))
+                await s.exec(
+                    select(UserInventory).where(UserInventory.item_id == sample_item.id)
+                )
             ).all()
             assert len(rows) == 0, "row should be deleted"
     finally:
         await c.aclose()
 
 
-async def test_upsert_then_delete_race_no_orphan(
-    session_factory, sample_item
-) -> None:
+async def test_upsert_then_delete_race_no_orphan(session_factory, sample_item) -> None:
     c = await _auth_client()
     try:
+
         async def put5():
             return await c.put(f"/api/inventory/{sample_item.id}", json={"quantity": 5})
 
         async def put0():
             return await c.put(f"/api/inventory/{sample_item.id}", json={"quantity": 0})
 
-        results = await asyncio.gather(put5(), put0(), put5(), put0(), return_exceptions=True)
+        results = await asyncio.gather(
+            put5(), put0(), put5(), put0(), return_exceptions=True
+        )
         statuses = [r.status_code for r in results if hasattr(r, "status_code")]
         assert all(s < 500 for s in statuses), statuses
 
         async with session_factory() as s:
             rows = (
-                await s.exec(select(UserInventory).where(UserInventory.item_id == sample_item.id))
+                await s.exec(
+                    select(UserInventory).where(UserInventory.item_id == sample_item.id)
+                )
             ).all()
             assert len(rows) in (0, 1)
             if rows:
@@ -98,6 +109,7 @@ async def test_upsert_then_delete_race_no_orphan(
 async def test_for_recipe_endpoint_consistent_under_writes(sample_item) -> None:
     c = await _auth_client()
     try:
+
         async def put(q):
             return await c.put(f"/api/inventory/{sample_item.id}", json={"quantity": q})
 
@@ -105,7 +117,12 @@ async def test_for_recipe_endpoint_consistent_under_writes(sample_item) -> None:
             return await c.get(f"/api/inventory/for-recipe/{sample_item.id}")
 
         results = await asyncio.gather(
-            put(10), get_for_recipe(), put(20), get_for_recipe(), put(30), get_for_recipe()
+            put(10),
+            get_for_recipe(),
+            put(20),
+            get_for_recipe(),
+            put(30),
+            get_for_recipe(),
         )
         for r in results:
             assert r.status_code < 500, f"500 on race: {r.status_code} {r.text}"

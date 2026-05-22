@@ -235,9 +235,7 @@ async def superuser_client() -> AsyncClient:
         suffix = uuid.uuid4().hex[:8]
         email = f"super-login-{suffix}@test.com"
         password = "supertest-pwd-123"
-        await c.post(
-            "/api/auth/register", json={"email": email, "password": password}
-        )
+        await c.post("/api/auth/register", json={"email": email, "password": password})
         from app.config.db import async_session_maker
         from app.users.models import User as UserModel
         from sqlmodel import select
@@ -248,7 +246,5 @@ async def superuser_client() -> AsyncClient:
             s.add(u)
             await s.commit()
 
-        await c.post(
-            "/api/auth/login", data={"username": email, "password": password}
-        )
+        await c.post("/api/auth/login", data={"username": email, "password": password})
         yield c

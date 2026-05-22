@@ -2,7 +2,6 @@
 import uuid
 
 import pytest
-from sqlalchemy import text
 
 from app.config.exceptions import AppError
 from app.crafting.calculator import build_craft_tree
@@ -16,7 +15,10 @@ def _name(prefix: str) -> str:
 
 async def _mk_item(session, name: str, price: int | None = 100) -> Item:
     item = Item(
-        name=name, category=ItemCategory.CRAFTING, grade=ItemGrade.BASIC, current_price=price
+        name=name,
+        category=ItemCategory.CRAFTING,
+        grade=ItemGrade.BASIC,
+        current_price=price,
     )
     session.add(item)
     await session.commit()
@@ -33,9 +35,11 @@ async def _mk_recipe(session, output_item: Item, output_qty: int = 1) -> Recipe:
 
 
 async def _mk_ing(session, recipe: Recipe, ing_item: Item, qty: int) -> None:
-    session.add(RecipeIngredient(
-        recipe_id=recipe.id, ingredient_item_id=ing_item.id, quantity=qty
-    ))
+    session.add(
+        RecipeIngredient(
+            recipe_id=recipe.id, ingredient_item_id=ing_item.id, quantity=qty
+        )
+    )
     await session.commit()
 
 
@@ -45,10 +49,16 @@ async def _build_maps(session, items: list[Item]) -> tuple[dict, dict]:
     item_map = {i.id: i for i in items}
     recipe_map: dict[int, tuple[Recipe, list[RecipeIngredient]]] = {}
     for i in items:
-        recipe = (await session.exec(select(Recipe).where(Recipe.item_id == i.id))).first()
+        recipe = (
+            await session.exec(select(Recipe).where(Recipe.item_id == i.id))
+        ).first()
         if recipe:
             ings = (
-                await session.exec(select(RecipeIngredient).where(RecipeIngredient.recipe_id == recipe.id))
+                await session.exec(
+                    select(RecipeIngredient).where(
+                        RecipeIngredient.recipe_id == recipe.id
+                    )
+                )
             ).all()
             recipe_map[i.id] = (recipe, list(ings))
     return recipe_map, item_map
@@ -94,10 +104,14 @@ async def test_missing_ingredient_recipe_returns_partial_cost(
     from sqlmodel import select
 
     recipe = (
-        await session.exec(select(Recipe).where(Recipe.item_id == item_with_broken_recipe.id))
+        await session.exec(
+            select(Recipe).where(Recipe.item_id == item_with_broken_recipe.id)
+        )
     ).first()
     ings = (
-        await session.exec(select(RecipeIngredient).where(RecipeIngredient.recipe_id == recipe.id))
+        await session.exec(
+            select(RecipeIngredient).where(RecipeIngredient.recipe_id == recipe.id)
+        )
     ).all()
 
     item_map = {item_with_broken_recipe.id: item_with_broken_recipe}

@@ -4,8 +4,6 @@ import uuid
 import pytest
 from httpx import AsyncClient
 
-from app.users.models import User
-
 
 def _email() -> str:
     return f"adm-{uuid.uuid4().hex[:8]}@test.com"
@@ -36,7 +34,9 @@ async def test_get_user_by_id_as_regular_user_forbidden(
     client: AsyncClient, regular_user_id: str
 ) -> None:
     email = _email()
-    await client.post("/api/auth/register", json={"email": email, "password": "pwd123456"})
+    await client.post(
+        "/api/auth/register", json={"email": email, "password": "pwd123456"}
+    )
     await client.post(
         "/api/auth/login", data={"username": email, "password": "pwd123456"}
     )
@@ -63,7 +63,9 @@ async def test_patch_user_as_superuser_can_promote(
     from sqlmodel import select
     from app.users.models import User as UserModel
 
-    result = await session.exec(select(UserModel).where(UserModel.id == regular_user_id))
+    result = await session.exec(
+        select(UserModel).where(UserModel.id == regular_user_id)
+    )
     user = result.one()
     assert user.is_superuser is True
 
