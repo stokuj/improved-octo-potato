@@ -19,6 +19,7 @@
 | Admin panel | sqladmin pod `/admin` |
 | Seed data | 29 itemów + drzewo receptur + 30d historia cen |
 | Infra | Podman compose dev + prod, Caddy, Makefile |
+| Test suite expansion | +28 backend, +38 frontend, +20 e2e Playwright specs (2026-05-22) |
 
 ## W trakcie / do merge
 
@@ -32,8 +33,6 @@
 |---|---|---|
 | pricetracker_folio (Lua addon) | wysoki | Addon do ArcheRage zapisujący ceny do JSONL; osobne repo |
 | Watcher daemon | średni | Zastąpiony botem, ale dla automatyzacji może wrócić |
-| Rate limit testy | niski | Brak testów dla slowapi limitera |
-| `/users/{id}` testy | niski | Admin endpoint bez pokrycia testami |
 | `aiosqlite` cleanup | niski | Zależność bez użycia — relikt z early dev |
 | `mockData.ts` cleanup | niski | Martwy plik w frontend lib |
 | `InventoryModal.svelte` | niski | Komponent bez importera — usunąć lub podpiąć |

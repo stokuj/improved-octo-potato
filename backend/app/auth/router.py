@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_users import exceptions as fu_exc
 from fastapi_users.router.common import ErrorCode
+from pydantic import BaseModel, EmailStr
 
 from app.auth.backend import auth_backend
 from app.auth.dependencies import fastapi_users, get_user_manager
@@ -9,6 +10,15 @@ from app.auth.schemas import UserCreate, UserRead, UserUpdate
 from app.config.rate_limit import limiter
 
 router = APIRouter()
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
 
 
 # --- Throttled endpoints (registered FIRST — FastAPI picks the first match) ---
@@ -64,11 +74,11 @@ async def register_throttled(
 @limiter.limit("5/hour")
 async def forgot_throttled(
     request: Request,
-    email: str,
+    body: ForgotPasswordRequest,
     user_manager=Depends(get_user_manager),
 ):
     try:
-        user = await user_manager.get_by_email(email)
+        user = await user_manager.get_by_email(body.email)
         await user_manager.forgot_password(user, request)
     except (fu_exc.UserNotExists, fu_exc.UserInactive):
         # Silent — don't leak account existence
@@ -80,12 +90,11 @@ async def forgot_throttled(
 @limiter.limit("5/hour")
 async def reset_throttled(
     request: Request,
-    token: str,
-    password: str,
+    body: ResetPasswordRequest,
     user_manager=Depends(get_user_manager),
 ):
     try:
-        await user_manager.reset_password(token, password, request)
+        await user_manager.reset_password(body.token, body.password, request)
     except (
         fu_exc.InvalidResetPasswordToken,
         fu_exc.UserNotExists,

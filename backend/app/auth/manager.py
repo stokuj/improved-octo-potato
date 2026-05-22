@@ -28,3 +28,17 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                 await session.commit()
 
         print(f"User {user.id} has registered.")
+
+    async def on_before_delete(
+        self, user: User, request: Optional[Request] = None
+    ) -> None:
+        async with async_session_maker() as session:
+            result = await session.exec(
+                select(Profile).where(Profile.user_id == user.id)
+            )
+            profile = result.one_or_none()
+            if profile is not None:
+                await session.delete(profile)
+                await session.commit()
+
+        print(f"User {user.id} is about to be deleted.")

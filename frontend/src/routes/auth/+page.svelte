@@ -83,7 +83,7 @@
                     />
                 </div>
 
-                <button class="btn btn-primary w-full mt-4 h-12 shadow-md shadow-primary/10 font-bold" disabled={isLoading}>
+                <button type="submit" class="btn btn-primary w-full mt-4 h-12 shadow-md shadow-primary/10 font-bold" disabled={isLoading}>
                     {#if isLoading}
                         <span class="loading loading-spinner loading-sm"></span>
                     {/if}

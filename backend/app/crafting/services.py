@@ -3,6 +3,7 @@ from collections import defaultdict
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.config.exceptions import AppError
 from app.crafting.calculator import build_craft_tree
 from app.crafting.models import Recipe, RecipeIngredient
 from app.crafting.schemas import CraftResult, CraftSummary
@@ -41,7 +42,11 @@ async def list_summaries(session: AsyncSession) -> list[CraftSummary]:
     all_items = await load_all_items(session)
     summaries = []
     for item_id in all_recipes:
-        result = build_craft_tree(item_id, 1, {}, all_recipes, all_items)
+        try:
+            result = build_craft_tree(item_id, 1, {}, all_recipes, all_items)
+        except AppError:
+            # Skip recipes that are cyclic or have missing ingredient data
+            continue
         summaries.append(
             CraftSummary(
                 item_id=result.item_id,

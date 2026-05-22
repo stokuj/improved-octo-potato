@@ -113,7 +113,7 @@
 
                 <div class="divider mt-2 mb-0"></div>
                 <div class="card-actions justify-end mt-2">
-                    <button class="btn btn-primary w-full sm:w-auto sm:btn-wide shadow-lg shadow-primary/30 transition-transform active:scale-95" disabled={isSaving}>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto sm:btn-wide shadow-lg shadow-primary/30 transition-transform active:scale-95" disabled={isSaving}>
                         {#if isSaving}
                             <span class="loading loading-spinner loading-sm"></span>
                         {/if}

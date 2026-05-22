@@ -28,3 +28,21 @@ describe('splitCurrency', () => {
 		expect(splitCurrency(null)).toBeNull();
 	});
 });
+
+describe('formatCurrency edge cases', () => {
+	it('handles NaN without crashing', () => {
+		expect(() => formatCurrency(Number.NaN)).not.toThrow();
+		expect(String(formatCurrency(Number.NaN))).not.toContain('NaN');
+	});
+
+	it('handles negative price', () => {
+		const out = formatCurrency(-1234);
+		expect(typeof out).toBe('string');
+	});
+
+	it('handles very large value > 2^31', () => {
+		const out = formatCurrency(9_999_999_999);
+		expect(typeof out).toBe('string');
+		expect(out.length).toBeGreaterThan(0);
+	});
+});

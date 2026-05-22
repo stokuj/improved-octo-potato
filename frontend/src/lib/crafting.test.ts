@@ -85,3 +85,21 @@ describe('computeNodeCost', () => {
         expect(Number.isInteger(MAX_RECIPE_DEPTH)).toBe(true);
     });
 });
+
+describe('crafting constants and edge cases', () => {
+    it('LABOUR_ITEM_NAME is a non-empty string constant', () => {
+        expect(typeof LABOUR_ITEM_NAME).toBe('string');
+        expect(LABOUR_ITEM_NAME.length).toBeGreaterThan(0);
+    });
+
+    it('multiplier=0 does not crash computeNodeCost', () => {
+        const tree = leaf(1, 2, 5);
+        expect(() => computeNodeCost(tree, 0, EMPTY_CTX)).not.toThrow();
+        expect(computeNodeCost(tree, 0, EMPTY_CTX)).toBe(0);
+    });
+
+    it('fractional multiplier handled without infinite loop', () => {
+        const tree = leaf(1, 2, 5);
+        expect(() => computeNodeCost(tree, 1.5, EMPTY_CTX)).not.toThrow();
+    });
+});

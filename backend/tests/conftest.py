@@ -201,3 +201,54 @@ def ingest_token(monkeypatch) -> str:
     monkeypatch.setenv("INGEST_TOKEN", token)
     monkeypatch.setattr(settings_singleton, "ingest_token", token, raising=False)
     return token
+
+
+@pytest.fixture()
+async def sample_superuser(session) -> User:
+    """Create a superuser with UUID-suffixed email and bcrypt password hash."""
+    from fastapi_users.password import PasswordHelper
+
+    suffix = uuid.uuid4().hex[:8]
+    user = User(
+        email=f"super-{suffix}@test.local",
+        hashed_password=PasswordHelper().hash(f"pwd-{suffix}"),
+        is_active=True,
+        is_superuser=True,
+        is_verified=True,
+    )
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    return user
+
+
+@pytest.fixture()
+async def superuser_client() -> AsyncClient:
+    """Fresh AsyncClient authenticated as a superuser.
+
+    Creates a separate client (not reusing the shared ``client`` fixture)
+    to avoid poisoning ``client``'s cookie jar with superuser credentials.
+    """
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as c:
+        suffix = uuid.uuid4().hex[:8]
+        email = f"super-login-{suffix}@test.com"
+        password = "supertest-pwd-123"
+        await c.post(
+            "/api/auth/register", json={"email": email, "password": password}
+        )
+        from app.config.db import async_session_maker
+        from app.users.models import User as UserModel
+        from sqlmodel import select
+
+        async with async_session_maker() as s:
+            u = (await s.exec(select(UserModel).where(UserModel.email == email))).one()
+            u.is_superuser = True
+            s.add(u)
+            await s.commit()
+
+        await c.post(
+            "/api/auth/login", data={"username": email, "password": password}
+        )
+        yield c
