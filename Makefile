@@ -5,7 +5,8 @@ PROD_COMPOSE := podman compose -f $(ROOT_DIR)infra/compose/docker-compose.prod.y
 .PHONY: help \
         dev-up dev-down dev-status dev-build dev-logs \
         prod-up prod-down prod-status prod-logs prod-build \
-        test migrate seed
+        test migrate seed \
+        e2e-up e2e-down e2e-seed e2e-migrate e2e-test e2e-logs
 
 help:
 	@echo "Development"
@@ -79,3 +80,25 @@ migrate:
 
 seed:
 	$(DEV_COMPOSE) exec backend uv run python seed.py
+
+E2E_COMPOSE := podman compose -f $(ROOT_DIR)infra/compose/docker-compose.e2e.yml
+
+# ── E2E ──────────────────────────────────────────────────────────────────────
+e2e-up:
+	$(E2E_COMPOSE) up -d --build
+
+e2e-down:
+	$(E2E_COMPOSE) down -v
+
+e2e-logs:
+	$(E2E_COMPOSE) logs -f
+
+e2e-migrate:
+	$(E2E_COMPOSE) exec backend-e2e uv run alembic upgrade head
+
+e2e-seed:
+	$(E2E_COMPOSE) exec -T db-e2e psql -U postgres -d app_e2e < $(ROOT_DIR)e2e/fixtures.sql
+	cd e2e && npx tsx seed.ts
+
+e2e-test:
+	cd e2e && npx playwright test

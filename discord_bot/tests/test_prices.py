@@ -9,6 +9,7 @@ from httpx import Response
 from cogs.prices import format_price, lookup_item, post_price
 
 API_URL = "http://testapi"
+INGEST_TOKEN = "test-ingest-token-32-characters-long-x"
 
 
 # --- format_price ---
@@ -175,15 +176,17 @@ async def test_post_price_sends_correct_payload():
         )
     )
 
-    await post_price(API_URL, "Iron Ore", 0, 32000)
+    await post_price(API_URL, "Iron Ore", 0, 32000, INGEST_TOKEN)
 
     assert route.called
-    payload = json.loads(route.calls[0].request.content)
+    request = route.calls[0].request
+    payload = json.loads(request.content)
     row = payload["rows"][0]
     assert row["name"] == "Iron Ore"
     assert row["grade"] == 0
     assert row["price"] == 32000
     assert row["source"] == "ah"
+    assert request.headers.get("authorization") == f"Bearer {INGEST_TOKEN}"
 
 
 @respx.mock
@@ -193,7 +196,7 @@ async def test_post_price_raises_on_http_error():
     )
 
     with pytest.raises(httpx.HTTPStatusError):
-        await post_price(API_URL, "Iron Ore", 0, 32000)
+        await post_price(API_URL, "Iron Ore", 0, 32000, INGEST_TOKEN)
 
 
 @respx.mock
@@ -211,7 +214,7 @@ async def test_post_price_raises_value_error_when_backend_skips_row():
     )
 
     with pytest.raises(ValueError, match="ts is in the future"):
-        await post_price(API_URL, "Iron Ore", 0, 32000)
+        await post_price(API_URL, "Iron Ore", 0, 32000, INGEST_TOKEN)
 
 
 @respx.mock
@@ -223,7 +226,7 @@ async def test_post_price_ts_includes_timezone():
         )
     )
 
-    await post_price(API_URL, "Iron Ore", 0, 32000)
+    await post_price(API_URL, "Iron Ore", 0, 32000, INGEST_TOKEN)
 
     payload = json.loads(route.calls[0].request.content)
     ts = payload["rows"][0]["ts"]
@@ -349,6 +352,7 @@ async def test_addprice_success_sends_saved_message():
 
     bot = MagicMock()
     bot.api_url = API_URL
+    bot.ingest_token = INGEST_TOKEN
     cog = PricesCog(bot)
     interaction = make_interaction()
 

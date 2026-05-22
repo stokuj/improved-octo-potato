@@ -1,0 +1,5 @@
+// Test stub for SvelteKit's $app/state module.
+export const page = {
+    params: {} as Record<string, string>,
+    url: new URL('http://localhost/')
+};

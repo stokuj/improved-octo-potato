@@ -179,7 +179,7 @@ async def test_bulk_ingest_match_by_name_and_grade(db_session: AsyncSession):
     assert points[0].price == 500
 
 
-async def test_post_ingest_prices_returns_200(client: AsyncClient):
+async def test_post_ingest_prices_returns_200(client: AsyncClient, ingest_token: str):
     resp = await client.post(
         "/api/ingest/prices",
         json={
@@ -193,6 +193,7 @@ async def test_post_ingest_prices_returns_200(client: AsyncClient):
                 }
             ]
         },
+        headers={"Authorization": f"Bearer {ingest_token}"},
     )
     assert resp.status_code == 200
     body = resp.json()
@@ -200,7 +201,9 @@ async def test_post_ingest_prices_returns_200(client: AsyncClient):
     assert body["auto_created"] == 1
 
 
-async def test_post_ingest_rejects_batch_over_100(client: AsyncClient):
+async def test_post_ingest_rejects_batch_over_100(
+    client: AsyncClient, ingest_token: str
+):
     rows = [
         {
             "name": f"i{n}",
@@ -211,11 +214,17 @@ async def test_post_ingest_rejects_batch_over_100(client: AsyncClient):
         }
         for n in range(101)
     ]
-    resp = await client.post("/api/ingest/prices", json={"rows": rows})
+    resp = await client.post(
+        "/api/ingest/prices",
+        json={"rows": rows},
+        headers={"Authorization": f"Bearer {ingest_token}"},
+    )
     assert resp.status_code == 422
 
 
-async def test_post_ingest_rejects_invalid_grade(client: AsyncClient):
+async def test_post_ingest_rejects_invalid_grade(
+    client: AsyncClient, ingest_token: str
+):
     resp = await client.post(
         "/api/ingest/prices",
         json={
@@ -229,11 +238,14 @@ async def test_post_ingest_rejects_invalid_grade(client: AsyncClient):
                 }
             ]
         },
+        headers={"Authorization": f"Bearer {ingest_token}"},
     )
     assert resp.status_code == 422
 
 
-async def test_post_ingest_rejects_negative_price(client: AsyncClient):
+async def test_post_ingest_rejects_negative_price(
+    client: AsyncClient, ingest_token: str
+):
     resp = await client.post(
         "/api/ingest/prices",
         json={
@@ -247,11 +259,14 @@ async def test_post_ingest_rejects_negative_price(client: AsyncClient):
                 }
             ]
         },
+        headers={"Authorization": f"Bearer {ingest_token}"},
     )
     assert resp.status_code == 422
 
 
-async def test_post_ingest_partial_success_reports_skipped(client: AsyncClient):
+async def test_post_ingest_partial_success_reports_skipped(
+    client: AsyncClient, ingest_token: str
+):
     rows = [
         {
             "name": "Good",
@@ -268,7 +283,11 @@ async def test_post_ingest_partial_success_reports_skipped(client: AsyncClient):
             "source": "ah",
         },
     ]
-    resp = await client.post("/api/ingest/prices", json={"rows": rows})
+    resp = await client.post(
+        "/api/ingest/prices",
+        json={"rows": rows},
+        headers={"Authorization": f"Bearer {ingest_token}"},
+    )
     assert resp.status_code == 200
     body = resp.json()
     assert body["accepted"] == 1
@@ -316,7 +335,9 @@ async def test_bulk_ingest_grade_zero_creates_item_with_basic_grade(
     assert item.grade == ItemGrade.BASIC
 
 
-async def test_ingest_price_appears_in_price_history(client: AsyncClient):
+async def test_ingest_price_appears_in_price_history(
+    client: AsyncClient, ingest_token: str
+):
     from datetime import datetime, timezone
 
     ts = datetime.now(timezone.utc).isoformat()
@@ -333,6 +354,7 @@ async def test_ingest_price_appears_in_price_history(client: AsyncClient):
                 }
             ]
         },
+        headers={"Authorization": f"Bearer {ingest_token}"},
     )
     assert ingest_resp.status_code == 200
     body = ingest_resp.json()
@@ -357,6 +379,7 @@ async def test_ingest_price_appears_in_price_history(client: AsyncClient):
 
 async def test_ingest_source_ah_does_not_appear_under_wrong_source(
     client: AsyncClient,
+    ingest_token: str,
 ):
     from datetime import datetime, timezone
 
@@ -374,6 +397,7 @@ async def test_ingest_source_ah_does_not_appear_under_wrong_source(
                 }
             ]
         },
+        headers={"Authorization": f"Bearer {ingest_token}"},
     )
     assert ingest_resp.json()["accepted"] == 1
 

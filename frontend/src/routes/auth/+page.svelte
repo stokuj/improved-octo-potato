@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { login, register, user } from '$lib/auth.svelte.js';
+    import { login, register, getUserState } from '$lib/auth.svelte.js';
+
+    const user = getUserState();
 
     let activeTab = $state('login'); // 'login' or 'register'
     let email = $state('');
@@ -13,7 +15,7 @@
         errorMessage = '';
 
         const action = activeTab === 'login' ? login : register;
-        const result = await action(email, password);
+        const result = await action(user, email, password);
 
         if (!result.success) {
             errorMessage = result.message ?? '';
@@ -81,7 +83,7 @@
                     />
                 </div>
 
-                <button class="btn btn-primary w-full mt-4 h-12 shadow-md shadow-primary/10 font-bold" disabled={isLoading}>
+                <button type="submit" class="btn btn-primary w-full mt-4 h-12 shadow-md shadow-primary/10 font-bold" disabled={isLoading}>
                     {#if isLoading}
                         <span class="loading loading-spinner loading-sm"></span>
                     {/if}

@@ -3,9 +3,11 @@
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import { API_BASE_URL } from '$lib/config.js';
-    import { user } from '$lib/auth.svelte.js';
+    import { getUserState } from '$lib/auth.svelte.js';
     import { gradeColor } from '$lib/grades.js';
     import type { ItemListItem, InventoryItem } from '$lib/types';
+
+    const user = getUserState();
 
     const CATEGORIES = [
         'Special Product','Weapons','Armor','Accessories','Instrument',

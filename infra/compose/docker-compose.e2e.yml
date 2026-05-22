@@ -1,0 +1,42 @@
+services:
+  db-e2e:
+    image: docker.io/library/postgres:16-alpine
+    environment:
+      POSTGRES_DB: app_e2e
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d app_e2e"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  backend-e2e:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    environment:
+      ASYNC_DATABASE_URL: postgresql+asyncpg://postgres:postgres@db-e2e:5432/app_e2e
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db-e2e:5432/app_e2e
+      AUTH_SECRET: e2e-secret-must-be-at-least-32-characters-here
+      ADMIN_SESSION_SECRET: e2e-admin-secret-must-be-32-chars-here
+      CORS_ORIGINS: '["http://localhost:5174"]'
+      ENVIRONMENT: dev
+    ports:
+      - "8001:8000"
+    depends_on:
+      db-e2e:
+        condition: service_healthy
+
+  frontend-e2e:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    environment:
+      PUBLIC_API_BASE_URL: http://localhost:8001
+    ports:
+      - "5174:3000"
+    depends_on:
+      - backend-e2e

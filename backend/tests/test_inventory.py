@@ -183,11 +183,10 @@ async def test_for_recipe_no_recipe_returns_empty(
     assert resp.json() == {}
 
 
-async def test_for_recipe_unknown_item_returns_empty(auth_client: AsyncClient) -> None:
-    """Item with no recipe → for-recipe returns {}."""
+async def test_for_recipe_unknown_item_returns_404(auth_client: AsyncClient) -> None:
+    """Unknown item id → 404 (distinguishes from leaf item)."""
     resp = await auth_client.get("/api/inventory/for-recipe/999999")
-    assert resp.status_code == 200
-    assert resp.json() == {}
+    assert resp.status_code == 404
 
 
 async def test_for_recipe_returns_matching_inventory(

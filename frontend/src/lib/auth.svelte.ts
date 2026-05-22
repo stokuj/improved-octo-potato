@@ -1,24 +1,54 @@
+import { getContext, setContext } from 'svelte';
 import { goto } from '$app/navigation';
 import { API_BASE_URL } from '$lib/config.js';
 import type { UserRead, ProfileRead } from '$lib/types';
 
-interface UserState {
+export interface UserState {
     data: UserRead | null
     profile: ProfileRead | null
     isLoggedIn: boolean
     loading: boolean
 }
 
-export const user = $state<UserState>({
-    data: null,
-    profile: null,
-    isLoggedIn: false,
-    loading: true
-});
+const USER_STATE_KEY = Symbol('user-state');
 
 const API_URL = API_BASE_URL;
 
-export async function fetchProfile(): Promise<void> {
+/**
+ * Create a fresh, per-request `$state` user store. SSR-safe: never share across requests.
+ */
+export function createUserState(): UserState {
+    const state = $state<UserState>({
+        data: null,
+        profile: null,
+        isLoggedIn: false,
+        loading: true
+    });
+    return state;
+}
+
+/**
+ * Root-layout helper: create state and register it on the Svelte context map.
+ * Returns the freshly created store so the layout can use it immediately.
+ */
+export function provideUserState(): UserState {
+    const state = createUserState();
+    setContext(USER_STATE_KEY, state);
+    return state;
+}
+
+/**
+ * Component-side helper. Throws when called outside a tree that ran `provideUserState`.
+ */
+export function getUserState(): UserState {
+    const state = getContext<UserState | undefined>(USER_STATE_KEY);
+    if (!state) {
+        throw new Error('User state not found. Did you call provideUserState() in the root layout?');
+    }
+    return state;
+}
+
+export async function fetchProfile(user: UserState): Promise<void> {
     try {
         const response = await fetch(`${API_URL}/profiles/me`, { credentials: 'include' });
         if (response.ok) {
@@ -29,13 +59,13 @@ export async function fetchProfile(): Promise<void> {
     }
 }
 
-export async function checkMe(): Promise<void> {
+export async function checkMe(user: UserState): Promise<void> {
     try {
         const response = await fetch(`${API_URL}/users/me`, { credentials: 'include' });
         if (response.ok) {
             user.data = await response.json();
             user.isLoggedIn = true;
-            await fetchProfile();
+            await fetchProfile(user);
         } else {
             user.data = null;
             user.profile = null;
@@ -48,7 +78,11 @@ export async function checkMe(): Promise<void> {
     }
 }
 
-export async function login(email: string, password: string): Promise<{ success: boolean; message?: string }> {
+export async function login(
+    user: UserState,
+    email: string,
+    password: string
+): Promise<{ success: boolean; message?: string }> {
     const body = new URLSearchParams();
     body.append('username', email);
     body.append('password', password);
@@ -61,7 +95,7 @@ export async function login(email: string, password: string): Promise<{ success:
     });
 
     if (response.ok) {
-        await checkMe();
+        await checkMe(user);
         goto('/');
         return { success: true };
     } else {
@@ -70,7 +104,11 @@ export async function login(email: string, password: string): Promise<{ success:
     }
 }
 
-export async function register(email: string, password: string): Promise<{ success: boolean; message?: string }> {
+export async function register(
+    user: UserState,
+    email: string,
+    password: string
+): Promise<{ success: boolean; message?: string }> {
     const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -79,14 +117,17 @@ export async function register(email: string, password: string): Promise<{ succe
     });
 
     if (response.ok) {
-        return await login(email, password);
+        return await login(user, email, password);
     } else {
         const error = await response.json();
         return { success: false, message: error.detail || 'Registration error' };
     }
 }
 
-export async function updateProfile(profileData: Partial<Pick<ProfileRead, 'display_name' | 'is_private'>>): Promise<{ success: boolean; message?: string }> {
+export async function updateProfile(
+    user: UserState,
+    profileData: Partial<Pick<ProfileRead, 'display_name' | 'is_private'>>
+): Promise<{ success: boolean; message?: string }> {
     try {
         const response = await fetch(`${API_URL}/profiles/me`, {
             method: 'PATCH',
@@ -106,7 +147,7 @@ export async function updateProfile(profileData: Partial<Pick<ProfileRead, 'disp
     }
 }
 
-export async function logout(): Promise<void> {
+export async function logout(user: UserState): Promise<void> {
     await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
     user.data = null;
     user.profile = null;

@@ -22,7 +22,8 @@ services:
     restart: unless-stopped
     command: >
       sh -c "uv run alembic upgrade head &&
-             uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+             uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+                    --proxy-headers --forwarded-allow-ips='*'"
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-app}
       ASYNC_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-app}
@@ -56,6 +57,18 @@ services:
       - "5173:5173"
     depends_on:
       - backend
+
+  discord_bot:
+    build: ../../discord_bot
+    restart: unless-stopped
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN:-}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
+      INGEST_TOKEN: ${INGEST_TOKEN:-temporary-ingest-token-must-be-32-chars-long-x}
+      API_URL: http://backend:8000/api
+    depends_on:
+      - backend
+    profiles: ["bot"]
 
 volumes:
   postgres_dev_data:
