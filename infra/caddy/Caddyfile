@@ -15,7 +15,13 @@
     }
 }
 
-{env.APP_DOMAIN}, {env.APP_WWW_DOMAIN} {
+# The auth cookie is host-only on the apex domain, so www only redirects there.
+{$APP_WWW_DOMAIN} {
+    import security_headers
+    redir https://{$APP_DOMAIN}{uri} permanent
+}
+
+{$APP_DOMAIN} {
     import security_headers
 
     handle /api/* {

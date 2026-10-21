@@ -31,6 +31,9 @@ services:
       ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-temporary-admin-session-secret-32-chars}
       SQL_ECHO: ${SQL_ECHO:-false}
       CORS_ORIGINS: '["http://localhost:5173","http://127.0.0.1:5173"]'
+      # Optional: the Google button works only when both are set.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
     volumes:
       - ../../backend/app:/app/app:z
       - ../../backend/alembic:/app/alembic:z
@@ -50,6 +53,7 @@ services:
     command: sh -c "npm install && npm run dev -- --host"
     environment:
       PUBLIC_API_URL: http://localhost:8000/api
+      PUBLIC_PASSWORD_LOGIN: "true"
       HOME: /root
       npm_config_cache: /root/.npm
     volumes:

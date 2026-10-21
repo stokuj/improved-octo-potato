@@ -36,6 +36,9 @@ services:
       dockerfile: Dockerfile
       args:
         PUBLIC_API_URL: http://localhost:8001/api
+    environment:
+      # e2e signs in with the password form, never Google.
+      PUBLIC_PASSWORD_LOGIN: "true"
     ports:
       - "5174:3000"
     depends_on:
