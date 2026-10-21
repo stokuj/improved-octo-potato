@@ -34,3 +34,7 @@ jobs:
       - name: svelte-check
         working-directory: frontend
         run: npm run check
+
+      - name: vitest
+        working-directory: frontend
+        run: npm test
