@@ -9,7 +9,6 @@ _SECRET_ENV_KEYS = (
     "ADMIN_SESSION_SECRET",
     "RESET_TOKEN_SECRET",
     "VERIFICATION_TOKEN_SECRET",
-    "INGEST_TOKEN",
     "ENVIRONMENT",
 )
 
@@ -54,5 +53,4 @@ def test_auth_reset_verify_secrets_must_differ(clean_env):
             admin_session_secret="a" * 40,
             reset_token_secret=same,
             verification_token_secret="v" * 40,
-            ingest_token="i" * 40,
         )

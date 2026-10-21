@@ -1,11 +1,13 @@
 import os
 
 # Musi być PRZED importami z app — pydantic-settings czyta env przy imporcie
+# TEST_PG_HOSTPORT lets a local run point at a non-default test server.
+os.environ.setdefault("TEST_PG_HOSTPORT", "localhost:5432")
 os.environ["ASYNC_DATABASE_URL"] = (
-    "postgresql+asyncpg://postgres:postgres@localhost:5432/app_test"
+    f"postgresql+asyncpg://postgres:postgres@{os.environ['TEST_PG_HOSTPORT']}/app_test"
 )
 os.environ["DATABASE_URL"] = (
-    "postgresql+psycopg://postgres:postgres@localhost:5432/app_test"
+    f"postgresql+psycopg://postgres:postgres@{os.environ['TEST_PG_HOSTPORT']}/app_test"
 )
 os.environ["AUTH_SECRET"] = "test-secret-must-be-at-least-32-characters-here"
 os.environ["ADMIN_SESSION_SECRET"] = "test-admin-secret-must-be-32-chars-here"
@@ -21,15 +23,9 @@ from sqlmodel import SQLModel
 
 # Import modeli — rejestruje metadata w SQLModel
 from app.items.models import Item, ItemCategory, ItemGrade  # noqa: F401
-from app.prices.models import PricePoint  # noqa: F401
-from app.profiles.models import Profile  # noqa: F401
-from app.user_items.models import UserItem  # noqa: F401
 from app.users.models import User  # noqa: F401
-from app.crafting.models import Recipe, RecipeIngredient  # noqa: F401
-from app.user_inventory.models import UserInventory  # noqa: F401
 from app.config.db import async_session_maker
 from app.config.rate_limit import limiter
-from app.config.settings import settings as settings_singleton
 from app.main import app
 
 _TEST_URL = os.environ["ASYNC_DATABASE_URL"]
@@ -40,7 +36,9 @@ async def setup_database():
     # NullPool disables connection reuse between tests — prevents leaked state
     engine = create_async_engine(_TEST_URL, poolclass=NullPool)
     async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
+        # drop_all cannot remove tables of deleted models that still have FKs to ours.
+        await conn.execute(text("DROP SCHEMA public CASCADE"))
+        await conn.execute(text("CREATE SCHEMA public"))
         await conn.run_sync(SQLModel.metadata.create_all)
     yield
     async with engine.begin() as conn:
@@ -130,77 +128,6 @@ async def sample_item(session) -> Item:
     await session.commit()
     await session.refresh(item)
     return item
-
-
-@pytest.fixture()
-async def sample_leaf_item(session) -> Item:
-    """Distinct Item fixture used as a leaf (no recipe) ingredient."""
-    suffix = uuid.uuid4().hex[:8]
-    item = Item(
-        name=f"leaf-item-{suffix}",
-        category=ItemCategory.OTHER,
-        grade=ItemGrade.BASIC,
-    )
-    session.add(item)
-    await session.commit()
-    await session.refresh(item)
-    return item
-
-
-@pytest.fixture()
-async def item_with_broken_recipe(session) -> Item:
-    """Item + Recipe + RecipeIngredient referencing a non-existent ingredient_item_id.
-
-    PG enforces FK constraints; we bypass via `session_replication_role = replica`
-    (requires superuser — test DB connects as `postgres`, which qualifies).
-    """
-    suffix = uuid.uuid4().hex[:8]
-    item = Item(
-        name=f"broken-recipe-item-{suffix}",
-        category=ItemCategory.CRAFTING,
-        grade=ItemGrade.BASIC,
-    )
-    session.add(item)
-    await session.commit()
-    await session.refresh(item)
-
-    recipe = Recipe(item_id=item.id, output_qty=1)
-    session.add(recipe)
-    await session.commit()
-    await session.refresh(recipe)
-
-    # Bypass FK to insert dangling ingredient reference
-    conn = await session.connection()
-    await conn.execute(text("SET session_replication_role = replica"))
-    try:
-        await conn.execute(
-            text(
-                "INSERT INTO recipeingredient (recipe_id, ingredient_item_id, quantity)"
-                " VALUES (:rid, :iid, :qty)"
-            ),
-            {"rid": recipe.id, "iid": 10**9, "qty": 1},
-        )
-        await session.commit()
-    finally:
-        conn2 = await session.connection()
-        await conn2.execute(text("SET session_replication_role = DEFAULT"))
-        await session.commit()
-
-    return item
-
-
-@pytest.fixture()
-def ingest_token(monkeypatch) -> str:
-    """Provide an INGEST_TOKEN env var + settings attribute for ingest endpoints.
-
-    NOTE: `settings.ingest_token` attribute is added in Task 0.6. We use
-    `raising=False` so this fixture is forward-compatible — env var is the
-    source of truth until the settings field lands.
-    """
-    token = f"test-ingest-{uuid.uuid4().hex}"
-    monkeypatch.setenv("INGEST_TOKEN", token)
-    monkeypatch.setattr(settings_singleton, "ingest_token", token, raising=False)
-    return token
 
 
 @pytest.fixture()

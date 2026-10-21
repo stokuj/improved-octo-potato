@@ -8,14 +8,12 @@ _DEFAULT_AUTH_SECRET = "temporary-development-secret-must-be-32-chars"
 _DEFAULT_ADMIN_SECRET = "temporary-admin-session-secret-must-be-32-chars"
 _DEFAULT_RESET_SECRET = "temporary-reset-token-secret-must-be-32-chars-x"
 _DEFAULT_VERIFY_SECRET = "temporary-verify-token-secret-must-be-32-chars"
-_DEFAULT_INGEST_TOKEN = "temporary-ingest-token-must-be-32-chars-long-x"
 
 _DEFAULTS = {
     _DEFAULT_AUTH_SECRET,
     _DEFAULT_ADMIN_SECRET,
     _DEFAULT_RESET_SECRET,
     _DEFAULT_VERIFY_SECRET,
-    _DEFAULT_INGEST_TOKEN,
 }
 
 
@@ -35,7 +33,6 @@ class Settings(BaseSettings):
     admin_session_secret: str = _DEFAULT_ADMIN_SECRET
     reset_token_secret: str = _DEFAULT_RESET_SECRET
     verification_token_secret: str = _DEFAULT_VERIFY_SECRET
-    ingest_token: str = _DEFAULT_INGEST_TOKEN
 
     cookie_secure: bool = False
     sql_echo: bool = False
@@ -51,7 +48,6 @@ class Settings(BaseSettings):
             "admin_session_secret": self.admin_session_secret,
             "reset_token_secret": self.reset_token_secret,
             "verification_token_secret": self.verification_token_secret,
-            "ingest_token": self.ingest_token,
         }
         for name, value in secrets.items():
             if len(value) < 32:
