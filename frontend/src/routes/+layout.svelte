@@ -1,7 +1,7 @@
 <script lang="ts">
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
-	import { provideUserState, checkMe, logout } from '$lib/auth.svelte.js';
+	import { provideUserState, checkMe, logout } from '$lib/core/auth.svelte.js';
 	import { onMount } from 'svelte';
 
 	const user = provideUserState();
@@ -32,7 +32,7 @@
 		<div class="flex-none">
 			<ul class="menu menu-horizontal px-1 gap-1 items-center">
 				<li>
-					<a href="/items" class="font-semibold text-sm hover:text-primary transition-colors">
+					<a href="/market" class="font-semibold text-sm hover:text-primary transition-colors">
 						Market
 					</a>
 				</li>
@@ -40,16 +40,13 @@
 				{#if user.loading}
 					<span class="loading loading-spinner loading-xs text-primary ml-2"></span>
 				{:else if user.isLoggedIn}
-					<li>
-						<a href="/saved-items" class="font-semibold text-sm hover:text-primary transition-colors">
-							Watchlist
-						</a>
-					</li>
-					<li>
-						<a href="/inventory" class="font-semibold text-sm hover:text-primary transition-colors">
-							Inventory
-						</a>
-					</li>
+					{#if user.data?.is_superuser}
+						<li>
+							<a href="/import" class="font-semibold text-sm hover:text-primary transition-colors">
+								Import
+							</a>
+						</li>
+					{/if}
 					<div class="dropdown dropdown-end ml-1">
 						<div tabindex="0" role="button" class="btn btn-ghost btn-sm btn-circle avatar placeholder">
 							<div class="bg-primary/20 text-primary rounded-full w-8 border border-primary/30">
@@ -60,7 +57,6 @@
 							<li class="px-3 py-2">
 								<span class="font-bold text-xs opacity-40 uppercase tracking-wider truncate">{user.data?.email}</span>
 							</li>
-							<li><a href="/settings" class="text-sm">Settings</a></li>
 							<li>
 								<button onclick={() => logout(user)} class="text-error text-sm border-t border-base-300 mt-1 pt-2 rounded-none">
 									Sign Out

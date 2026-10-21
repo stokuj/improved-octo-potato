@@ -7,9 +7,9 @@ export default defineConfig({
 	resolve: {
 		conditions: ['browser'],
 		alias: {
-			'$lib/auth.svelte.js': path.resolve(__dirname, 'src/test/mocks/auth.svelte.ts'),
-			'$lib/auth.svelte': path.resolve(__dirname, 'src/test/mocks/auth.svelte.ts'),
-			'$lib/config.js': path.resolve(__dirname, 'src/test/mocks/config.ts'),
+			'$lib/core/auth.svelte.js': path.resolve(__dirname, 'src/test/mocks/auth.svelte.ts'),
+			'$lib/core/auth.svelte': path.resolve(__dirname, 'src/test/mocks/auth.svelte.ts'),
+			'$lib/core/config.js': path.resolve(__dirname, 'src/test/mocks/config.ts'),
 			$lib: path.resolve(__dirname, 'src/lib'),
 			'$app/navigation': path.resolve(__dirname, 'src/test/mocks/app-navigation.ts'),
 			'$app/state': path.resolve(__dirname, 'src/test/mocks/app-state.ts'),

@@ -5,3 +5,7 @@ build
 .idea
 .vscode
 .git
+frozen
+e2e
+test-results
+playwright-report

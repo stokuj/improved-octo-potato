@@ -11,11 +11,16 @@ beforeEach(() => {
 });
 
 describe('auth page', () => {
+  it('renders only a login form', () => {
+    render(Page);
+    expect(document.querySelector('form')).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/register/i);
+  });
+
   it('submits login with credentials:include', async () => {
     const fetchSpy = mockFetch({
       '/api/auth/login': { status: 204 },
       '/api/users/me': { json: async () => ({ id: 'u1', email: 'a@b.c' }) },
-      '/api/profiles/me': { json: async () => ({ display_name: 'Test', is_private: false }) },
     });
     render(Page);
     const email = document.querySelector('input[type="email"]') as HTMLInputElement;
