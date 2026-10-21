@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     reset_token_secret: str = _DEFAULT_RESET_SECRET
     verification_token_secret: str = _DEFAULT_VERIFY_SECRET
 
+    # Google sign-in; the OAuth router is mounted only when both are set.
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    # Where Google sends the browser back (/auth/callback) and /admin sends anonymous users.
+    frontend_url: str = "http://localhost:5173"
+
     cookie_secure: bool = False
     sql_echo: bool = False
     # Env format: JSON array string, e.g., '["http://localhost:3000"]'
@@ -59,6 +65,10 @@ class Settings(BaseSettings):
                     raise ValueError(
                         f"{name} is using default value — must be set explicitly in prod"
                     )
+            if not (self.google_client_id and self.google_client_secret):
+                raise ValueError(
+                    "google_client_id and google_client_secret are required in prod"
+                )
         token_secrets = {
             self.auth_secret,
             self.reset_token_secret,

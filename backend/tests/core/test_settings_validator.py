@@ -10,6 +10,9 @@ _SECRET_ENV_KEYS = (
     "RESET_TOKEN_SECRET",
     "VERIFICATION_TOKEN_SECRET",
     "ENVIRONMENT",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "FRONTEND_URL",
 )
 
 
@@ -54,3 +57,31 @@ def test_auth_reset_verify_secrets_must_differ(clean_env):
             reset_token_secret=same,
             verification_token_secret="v" * 40,
         )
+
+
+_PROD_SECRETS = dict(
+    auth_secret="a" * 40,
+    admin_session_secret="b" * 40,
+    reset_token_secret="c" * 40,
+    verification_token_secret="d" * 40,
+)
+
+
+def test_prod_requires_google_settings(clean_env):
+    from app.core.settings import Settings
+
+    with pytest.raises(ValidationError) as exc:
+        Settings(environment="prod", **_PROD_SECRETS)
+    assert "google" in str(exc.value).lower()
+
+
+def test_prod_accepts_google_settings(clean_env):
+    from app.core.settings import Settings
+
+    s = Settings(
+        environment="prod",
+        google_client_id="id",
+        google_client_secret="secret",
+        **_PROD_SECRETS,
+    )
+    assert s.frontend_url == "http://localhost:5173"
