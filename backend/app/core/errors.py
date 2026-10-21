@@ -1,3 +1,4 @@
+# App-level exceptions and their JSON handlers.
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 

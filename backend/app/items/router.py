@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.config.db import get_async_session
+from app.core.db import get_async_session
 from app.items.models import ItemCategory, ItemGrade
 from app.items.schemas import ItemRead, PaginatedItems
 from app.items import services

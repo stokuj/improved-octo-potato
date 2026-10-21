@@ -1,3 +1,4 @@
+# fastapi-users dependency wiring (current_user, current_superuser).
 import uuid
 
 from fastapi import Depends
@@ -7,8 +8,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.auth.backend import auth_backend
 from app.auth.manager import UserManager
-from app.config.db import get_async_session
-from app.users.models import User
+from app.core.db import get_async_session
+from app.auth.models import User
 
 
 async def get_user_db(session: AsyncSession = Depends(get_async_session)):

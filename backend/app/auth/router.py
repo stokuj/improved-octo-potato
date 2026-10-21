@@ -7,7 +7,7 @@ from pydantic import BaseModel, EmailStr
 from app.auth.backend import auth_backend
 from app.auth.dependencies import fastapi_users, get_user_manager
 from app.auth.schemas import UserCreate, UserRead, UserUpdate
-from app.config.rate_limit import limiter
+from app.core.rate_limit import limiter
 
 router = APIRouter()
 

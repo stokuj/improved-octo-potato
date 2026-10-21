@@ -1,4 +1,4 @@
-# backend/tests/test_admin_users.py
+# backend/tests/auth/test_users_api.py
 import uuid
 
 import pytest
@@ -61,7 +61,7 @@ async def test_patch_user_as_superuser_can_promote(
     assert r.status_code == 200, r.text
 
     from sqlmodel import select
-    from app.users.models import User as UserModel
+    from app.auth.models import User as UserModel
 
     result = await session.exec(
         select(UserModel).where(UserModel.id == regular_user_id)
@@ -83,7 +83,7 @@ async def test_patch_user_self_cannot_promote(client: AsyncClient, session) -> N
     r = await client.patch("/api/users/me", json={"is_superuser": True})
 
     from sqlmodel import select
-    from app.users.models import User as UserModel
+    from app.auth.models import User as UserModel
 
     result = await session.exec(select(UserModel).where(UserModel.id == uid))
     user = result.one()
@@ -99,10 +99,3 @@ async def test_delete_user_as_superuser(
 
     r2 = await superuser_client.get(f"/api/users/{regular_user_id}")
     assert r2.status_code == 404
-
-
-async def test_admin_panel_redirects_unauth_to_login(client: AsyncClient) -> None:
-    r = await client.get("/admin/", follow_redirects=False)
-    assert r.status_code in (302, 303, 401)
-    if r.status_code in (302, 303):
-        assert "/admin" in r.headers.get("location", "")

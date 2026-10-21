@@ -1,3 +1,4 @@
+# App settings from env/.env, with prod secret checks.
 from typing import Literal
 
 from pydantic import Field, model_validator

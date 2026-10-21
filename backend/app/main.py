@@ -1,28 +1,19 @@
-from contextlib import asynccontextmanager
-
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.admin import setup_admin
+from app.admin.setup import setup_admin
 from app.auth.router import router as auth_router
-from app.config.exceptions import register_exception_handlers
-from app.config.rate_limit import limiter
-from app.config.settings import settings
+from app.core.errors import register_exception_handlers
+from app.core.rate_limit import limiter
+from app.core.settings import settings
 from app.items.router import router as items_router
-from app.users.router import router as users_router
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    yield
-
-
-_is_prod = getattr(settings, "environment", "dev") == "prod"
+_is_prod = settings.environment == "prod"
 
 app = FastAPI(
-    lifespan=lifespan,
     docs_url=None if _is_prod else "/docs",
     redoc_url=None if _is_prod else "/redoc",
     openapi_url=None if _is_prod else "/openapi.json",
@@ -43,7 +34,6 @@ register_exception_handlers(app)
 # All API routes live under /api — admin stays at /admin (sqladmin)
 api = APIRouter(prefix="/api")
 api.include_router(auth_router)
-api.include_router(users_router)
 api.include_router(items_router)
 app.include_router(api)
 

@@ -1,11 +1,12 @@
+# sqladmin login backend (superusers only).
 from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
 from sqladmin.authentication import AuthenticationBackend
 
 from app.auth.dependencies import get_user_manager, get_user_db
-from app.config.db import async_session_maker
-from app.config.settings import settings
-from app.users.models import User
+from app.core.db import async_session_maker
+from app.core.settings import settings
+from app.auth.models import User
 
 
 class AdminAuth(AuthenticationBackend):

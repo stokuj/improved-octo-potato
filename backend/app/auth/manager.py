@@ -1,9 +1,10 @@
+# fastapi-users UserManager.
 import uuid
 
 from fastapi_users.manager import BaseUserManager, UUIDIDMixin
 
-from app.config.settings import settings
-from app.users.models import User
+from app.core.settings import settings
+from app.auth.models import User
 
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):

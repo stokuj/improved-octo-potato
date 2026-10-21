@@ -18,8 +18,7 @@ def test_docs_404_in_prod(monkeypatch, path):
     monkeypatch.setenv("ADMIN_SESSION_SECRET", "b" * 40)
     monkeypatch.setenv("RESET_TOKEN_SECRET", "r" * 40)
     monkeypatch.setenv("VERIFICATION_TOKEN_SECRET", "v" * 40)
-    monkeypatch.setenv("INGEST_TOKEN", "i" * 40)
-    import app.config.settings as s
+    import app.core.settings as s
 
     importlib.reload(s)
     import app.main as m

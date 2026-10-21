@@ -21,13 +21,13 @@ def clean_env(monkeypatch, tmp_path):
     for k in _SECRET_ENV_KEYS:
         monkeypatch.delenv(k, raising=False)
     # Reload so a previous import doesn't keep stale env-derived state
-    import app.config.settings as s
+    import app.core.settings as s
 
     importlib.reload(s)
 
 
 def test_default_secrets_rejected_when_environment_is_prod(clean_env):
-    from app.config.settings import Settings
+    from app.core.settings import Settings
 
     with pytest.raises(ValidationError) as exc:
         Settings(environment="prod")  # all secret fields fall back to defaults
@@ -36,14 +36,14 @@ def test_default_secrets_rejected_when_environment_is_prod(clean_env):
 
 
 def test_secrets_must_be_32_chars(clean_env):
-    from app.config.settings import Settings
+    from app.core.settings import Settings
 
     with pytest.raises(ValidationError):
         Settings(environment="dev", auth_secret="too-short")
 
 
 def test_auth_reset_verify_secrets_must_differ(clean_env):
-    from app.config.settings import Settings
+    from app.core.settings import Settings
 
     same = "x" * 40
     with pytest.raises(ValidationError):

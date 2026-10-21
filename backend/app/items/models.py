@@ -1,11 +1,9 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import StrEnum
 
 from sqlmodel import Field, SQLModel, UniqueConstraint
 
-
-def utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+from app.core.time import utcnow
 
 
 class ItemCategory(StrEnum):

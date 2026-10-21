@@ -1,7 +1,7 @@
 from sqlmodel import select, func, col
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.config.exceptions import NotFoundError
+from app.core.errors import NotFoundError
 from app.items.models import Item, ItemCategory, ItemGrade
 from app.items.schemas import ItemListItem, PaginatedItems
 

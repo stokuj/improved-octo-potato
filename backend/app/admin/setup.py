@@ -1,10 +1,11 @@
+# Registers sqladmin views.
 from fastapi import FastAPI
 from sqladmin import Admin
 
-from app.admin_auth import authentication_backend
-from app.config.db import engine
+from app.admin.auth import authentication_backend
+from app.core.db import engine
 from app.items.admin import ItemAdmin
-from app.users.admin import UserAdmin
+from app.auth.admin import UserAdmin
 
 
 def setup_admin(app: FastAPI) -> Admin:

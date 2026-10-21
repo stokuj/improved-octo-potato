@@ -29,8 +29,3 @@ class PaginatedItems(BaseModel):
     total: int
     offset: int
     limit: int
-
-
-class ItemFilter(BaseModel):
-    category: ItemCategory | None = None
-    grade: ItemGrade | None = None

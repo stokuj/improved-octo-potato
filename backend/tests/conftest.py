@@ -23,9 +23,9 @@ from sqlmodel import SQLModel
 
 # Import modeli — rejestruje metadata w SQLModel
 from app.items.models import Item, ItemCategory, ItemGrade  # noqa: F401
-from app.users.models import User  # noqa: F401
-from app.config.db import async_session_maker
-from app.config.rate_limit import limiter
+from app.auth.models import User  # noqa: F401
+from app.core.db import async_session_maker
+from app.core.rate_limit import limiter
 from app.main import app
 
 _TEST_URL = os.environ["ASYNC_DATABASE_URL"]
@@ -163,8 +163,8 @@ async def superuser_client() -> AsyncClient:
         email = f"super-login-{suffix}@test.com"
         password = "supertest-pwd-123"
         await c.post("/api/auth/register", json={"email": email, "password": password})
-        from app.config.db import async_session_maker
-        from app.users.models import User as UserModel
+        from app.core.db import async_session_maker
+        from app.auth.models import User as UserModel
         from sqlmodel import select
 
         async with async_session_maker() as s:

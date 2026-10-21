@@ -7,8 +7,8 @@ from alembic import context
 
 # Import models to ensure they are discovered by SQLModel.metadata
 from app.items.models import Item  # noqa: F401
-from app.users.models import User  # noqa: F401
-from app.config.settings import settings
+from app.auth.models import User  # noqa: F401
+from app.core.settings import settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

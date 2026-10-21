@@ -1,10 +1,11 @@
+# DB engines and the async session dependency.
 from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import create_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.config.settings import settings
+from app.core.settings import settings
 
 DATABASE_URL = settings.database_url
 ASYNC_DATABASE_URL = settings.async_database_url
