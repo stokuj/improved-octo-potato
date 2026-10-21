@@ -1,4 +1,4 @@
-from sqlalchemy import literal_column, tuple_
+from sqlalchemy import func, literal_column, text, tuple_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import col, select
@@ -12,8 +12,16 @@ from app.market.csv_format import (
     RowError,
     parse_csv,
 )
+from app.core.errors import NotFoundError
 from app.market.models import Item, Listing, MarketDay
-from app.market.schemas import ImportFileResult, ImportRowError
+from app.market.schemas import (
+    ImportFileResult,
+    ImportRowError,
+    ListingRead,
+    MarketDayRead,
+    MarketItemRead,
+    SummaryRow,
+)
 
 MAX_FILE_BYTES = 50 * 1024 * 1024
 MAX_ERRORS = 100
@@ -232,3 +240,98 @@ async def import_csv(
             ImportRowError(line=e.line, reason=e.reason) for e in errors[:MAX_ERRORS]
         ],
     )
+
+
+async def _get_item(session: AsyncSession, item_id: int) -> Item:
+    item = await session.get(Item, item_id)
+    if item is None:
+        raise NotFoundError("Item not found")
+    return item
+
+
+async def list_items(session: AsyncSession) -> list[MarketItemRead]:
+    last_day = (
+        select(func.max(MarketDay.day))
+        .where(MarketDay.item_id == Item.id)
+        .scalar_subquery()
+    )
+    has_data = select(MarketDay.item_id).where(
+        MarketDay.item_id == Item.id
+    ).exists() | (select(Listing.item_id).where(Listing.item_id == Item.id).exists())
+    rows = await session.exec(
+        select(Item, last_day).where(has_data).order_by(Item.name)  # type: ignore[call-overload]
+    )
+    return [
+        MarketItemRead(
+            id=i.id,
+            name=i.name,
+            item_type=i.item_type,
+            item_grade=i.item_grade,
+            last_day=d,
+        )
+        for i, d in rows.all()
+    ]
+
+
+async def get_days(
+    session: AsyncSession, item_id: int, days: int
+) -> list[MarketDayRead]:
+    await _get_item(session, item_id)
+    rows = await session.exec(
+        select(MarketDay)
+        .where(MarketDay.item_id == item_id)
+        .order_by(col(MarketDay.day).desc())
+        .limit(days)
+    )
+    return [
+        MarketDayRead.model_validate(r, from_attributes=True)
+        for r in reversed(rows.all())
+    ]
+
+
+async def get_latest_listings(session: AsyncSession, item_id: int) -> list[ListingRead]:
+    await _get_item(session, item_id)
+    newest = (
+        select(func.max(Listing.scan_id))
+        .where(Listing.item_id == item_id)
+        .scalar_subquery()
+    )
+    rows = await session.exec(
+        select(Listing)
+        .where(Listing.item_id == item_id, Listing.scan_id == newest)
+        .order_by(Listing.rank)
+    )
+    return [ListingRead.model_validate(r, from_attributes=True) for r in rows.all()]
+
+
+_SUMMARY_SQL = text(
+    """
+    WITH latest AS (
+        SELECT item_id, max(day) AS day FROM market_day GROUP BY item_id
+    )
+    SELECT i.id AS item_id, i.name, l.day,
+           t.daily_avg AS today_avg, t.volume AS sold_today,
+           p.weekly_avg AS avg_7d,
+           (SELECT avg(w.volume) FROM market_day w
+             WHERE w.item_id = l.item_id
+               AND w.day BETWEEN l.day - 7 AND l.day - 1) AS avg_daily_volume
+    FROM latest l
+    JOIN item i ON i.id = l.item_id
+    JOIN market_day t ON t.item_id = l.item_id AND t.day = l.day
+    LEFT JOIN market_day p ON p.item_id = l.item_id AND p.day = l.day - 1
+    ORDER BY i.name
+    """
+)
+
+
+async def get_summary(session: AsyncSession) -> list[SummaryRow]:
+    rows = (await session.exec(_SUMMARY_SQL)).mappings().all()  # type: ignore[call-overload]
+    return [
+        SummaryRow(
+            **r,
+            change_pct=round((r["today_avg"] - r["avg_7d"]) / r["avg_7d"], 4)
+            if r["avg_7d"]
+            else None,
+        )
+        for r in rows
+    ]
