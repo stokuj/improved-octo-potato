@@ -10,14 +10,9 @@ def _email() -> str:
 
 
 @pytest.fixture()
-async def regular_user_id(client: AsyncClient) -> str:
-    """Register a regular user via API, return the new user's id."""
-    email = _email()
-    r = await client.post(
-        "/api/auth/register", json={"email": email, "password": "pwd123456"}
-    )
-    assert r.status_code in (200, 201), r.text
-    return r.json()["id"]
+async def regular_user_id(make_user) -> str:
+    user, _ = await make_user(email=_email())
+    return str(user.id)
 
 
 async def test_get_user_by_id_as_superuser(
@@ -31,15 +26,10 @@ async def test_get_user_by_id_as_superuser(
 
 
 async def test_get_user_by_id_as_regular_user_forbidden(
-    client: AsyncClient, regular_user_id: str
+    client: AsyncClient, regular_user_id: str, make_user, login
 ) -> None:
-    email = _email()
-    await client.post(
-        "/api/auth/register", json={"email": email, "password": "pwd123456"}
-    )
-    await client.post(
-        "/api/auth/login", data={"username": email, "password": "pwd123456"}
-    )
+    user, pwd = await make_user(email=_email())
+    await login(client, user.email, pwd)
 
     r = await client.get(f"/api/users/{regular_user_id}")
     assert r.status_code == 403
@@ -70,15 +60,12 @@ async def test_patch_user_as_superuser_can_promote(
     assert user.is_superuser is True
 
 
-async def test_patch_user_self_cannot_promote(client: AsyncClient, session) -> None:
-    email = _email()
-    reg = await client.post(
-        "/api/auth/register", json={"email": email, "password": "pwd123456"}
-    )
-    uid = reg.json()["id"]
-    await client.post(
-        "/api/auth/login", data={"username": email, "password": "pwd123456"}
-    )
+async def test_patch_user_self_cannot_promote(
+    client: AsyncClient, session, make_user, login
+) -> None:
+    user, pwd = await make_user(email=_email())
+    uid = user.id
+    await login(client, user.email, pwd)
 
     r = await client.patch("/api/users/me", json={"is_superuser": True})
 

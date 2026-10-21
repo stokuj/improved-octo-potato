@@ -103,7 +103,7 @@ async def sample_user(session) -> User:
 
     suffix = uuid.uuid4().hex[:8]
     user = User(
-        email=f"user-{suffix}@test.local",
+        email=f"user-{suffix}@example.com",
         hashed_password=PasswordHelper().hash(f"pwd-{suffix}"),
         is_active=True,
         is_superuser=False,
@@ -137,7 +137,7 @@ async def sample_superuser(session) -> User:
 
     suffix = uuid.uuid4().hex[:8]
     user = User(
-        email=f"super-{suffix}@test.local",
+        email=f"super-{suffix}@example.com",
         hashed_password=PasswordHelper().hash(f"pwd-{suffix}"),
         is_active=True,
         is_superuser=True,
@@ -150,28 +150,47 @@ async def sample_superuser(session) -> User:
 
 
 @pytest.fixture()
-async def superuser_client() -> AsyncClient:
-    """Fresh AsyncClient authenticated as a superuser.
+def make_user(session):
+    """Create a user straight in the DB (registration is off). Returns (user, password)."""
+    from fastapi_users.password import PasswordHelper
 
-    Creates a separate client (not reusing the shared ``client`` fixture)
-    to avoid poisoning ``client``'s cookie jar with superuser credentials.
-    """
+    async def _make(
+        email: str | None = None,
+        password: str = "pwd-12345678",
+        superuser: bool = False,
+    ) -> tuple[User, str]:
+        user = User(
+            email=email or f"user-{uuid.uuid4().hex[:8]}@example.com",
+            hashed_password=PasswordHelper().hash(password),
+            is_active=True,
+            is_superuser=superuser,
+            is_verified=True,
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        return user, password
+
+    return _make
+
+
+@pytest.fixture()
+def login():
+    async def _login(c: AsyncClient, email: str, password: str) -> None:
+        r = await c.post(
+            "/api/auth/login", data={"username": email, "password": password}
+        )
+        assert r.status_code == 204, r.text
+
+    return _login
+
+
+@pytest.fixture()
+async def superuser_client(make_user, login) -> AsyncClient:
+    """Separate client logged in as a superuser, so ``client``'s cookies stay clean."""
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as c:
-        suffix = uuid.uuid4().hex[:8]
-        email = f"super-login-{suffix}@test.com"
-        password = "supertest-pwd-123"
-        await c.post("/api/auth/register", json={"email": email, "password": password})
-        from app.core.db import async_session_maker
-        from app.auth.models import User as UserModel
-        from sqlmodel import select
-
-        async with async_session_maker() as s:
-            u = (await s.exec(select(UserModel).where(UserModel.email == email))).one()
-            u.is_superuser = True
-            s.add(u)
-            await s.commit()
-
-        await c.post("/api/auth/login", data={"username": email, "password": password})
+        user, pwd = await make_user(superuser=True)
+        await login(c, user.email, pwd)
         yield c

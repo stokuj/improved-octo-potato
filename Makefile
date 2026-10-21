@@ -5,7 +5,7 @@ PROD_COMPOSE := podman compose -f $(ROOT_DIR)infra/compose/docker-compose.prod.y
 .PHONY: help \
         dev-up dev-down dev-status dev-build dev-logs \
         prod-up prod-down prod-status prod-logs prod-build \
-        test migrate seed \
+        test migrate seed create-superuser \
         e2e-up e2e-down e2e-seed e2e-migrate e2e-test e2e-logs
 
 help:
@@ -27,6 +27,7 @@ help:
 	@echo "  make test         Run backend test suite"
 	@echo "  make migrate      Run alembic upgrade head inside dev backend"
 	@echo "  make seed         Seed db with sample items and price history"
+	@echo "  make create-superuser EMAIL=.. PASSWORD=..  Create the admin or reset its password"
 
 # ── Development ──────────────────────────────────────────────────────────────
 
@@ -80,6 +81,9 @@ migrate:
 
 seed:
 	$(DEV_COMPOSE) exec backend uv run python seed.py
+
+create-superuser:
+	$(DEV_COMPOSE) exec backend uv run python -m app.auth.cli create-superuser "$(EMAIL)" "$(PASSWORD)"
 
 E2E_COMPOSE := podman compose -f $(ROOT_DIR)infra/compose/docker-compose.e2e.yml
 

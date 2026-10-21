@@ -1,54 +1,40 @@
-import uuid
+import pytest
 from httpx import AsyncClient
 
 
-def _email() -> str:
-    return f"user-{uuid.uuid4().hex[:8]}@test.com"
+async def test_register_route_is_gone(client: AsyncClient) -> None:
+    r = await client.post(
+        "/api/auth/register", json={"email": "x@example.com", "password": "password123"}
+    )
+    assert r.status_code in (404, 405)
 
 
-async def test_register_creates_user(client: AsyncClient) -> None:
-    email = _email()
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/auth/forgot-password",
+        "/api/auth/reset-password",
+        "/api/auth/request-verify-token",
+        "/api/auth/verify",
+    ],
+)
+async def test_account_flow_routes_are_gone(client: AsyncClient, path: str) -> None:
+    assert (await client.post(path, json={})).status_code in (404, 405)
+
+
+async def test_login_sets_cookie(client: AsyncClient, make_user) -> None:
+    user, pwd = await make_user()
     resp = await client.post(
-        "/api/auth/register", json={"email": email, "password": "password123"}
-    )
-    assert resp.status_code == 201
-    data = resp.json()
-    assert data["email"] == email
-    assert "id" in data
-
-
-async def test_register_duplicate_returns_400(client: AsyncClient) -> None:
-    email = _email()
-    await client.post(
-        "/api/auth/register", json={"email": email, "password": "password123"}
-    )
-    resp = await client.post(
-        "/api/auth/register", json={"email": email, "password": "password123"}
-    )
-    assert resp.status_code == 400
-
-
-async def test_login_sets_cookie(client: AsyncClient) -> None:
-    email = _email()
-    await client.post(
-        "/api/auth/register", json={"email": email, "password": "password123"}
-    )
-    resp = await client.post(
-        "/api/auth/login",
-        data={"username": email, "password": "password123"},
+        "/api/auth/login", data={"username": user.email, "password": pwd}
     )
     assert resp.status_code == 204
     assert "fastapiusersauth" in resp.cookies
 
 
-async def test_login_wrong_password_returns_400(client: AsyncClient) -> None:
-    email = _email()
-    await client.post(
-        "/api/auth/register", json={"email": email, "password": "password123"}
-    )
+async def test_login_wrong_password_returns_400(client: AsyncClient, make_user) -> None:
+    user, _ = await make_user()
     resp = await client.post(
-        "/api/auth/login",
-        data={"username": email, "password": "wrongpassword"},
+        "/api/auth/login", data={"username": user.email, "password": "wrongpassword"}
     )
     assert resp.status_code == 400
 
@@ -58,50 +44,18 @@ async def test_me_requires_auth(client: AsyncClient) -> None:
     assert resp.status_code == 401
 
 
-async def test_me_returns_user_after_login(client: AsyncClient) -> None:
-    email = _email()
-    await client.post(
-        "/api/auth/register", json={"email": email, "password": "password123"}
-    )
-    await client.post(
-        "/api/auth/login", data={"username": email, "password": "password123"}
-    )
-    resp = await client.get("/api/users/me")
-    assert resp.status_code == 200
-    assert resp.json()["email"] == email
+async def test_me_exposes_superuser_flag(client: AsyncClient, make_user, login) -> None:
+    user, pwd = await make_user(superuser=True)
+    await login(client, user.email, pwd)
+    body = (await client.get("/api/users/me")).json()
+    assert body == {"id": str(user.id), "email": user.email, "is_superuser": True}
 
 
-async def test_logout_clears_cookie(client: AsyncClient) -> None:
-    email = _email()
-    await client.post(
-        "/api/auth/register", json={"email": email, "password": "password123"}
-    )
-    await client.post(
-        "/api/auth/login", data={"username": email, "password": "password123"}
-    )
-
-    me_resp = await client.get("/api/users/me")
-    assert me_resp.status_code == 200
+async def test_logout_clears_cookie(client: AsyncClient, make_user, login) -> None:
+    user, pwd = await make_user()
+    await login(client, user.email, pwd)
+    assert (await client.get("/api/users/me")).status_code == 200
 
     logout_resp = await client.post("/api/auth/logout")
     assert logout_resp.status_code == 204
-
-    me_after = await client.get("/api/users/me")
-    assert me_after.status_code == 401
-
-
-async def test_me_does_not_expose_superuser_flag(client: AsyncClient) -> None:
-    email = _email()
-    await client.post(
-        "/api/auth/register", json={"email": email, "password": "password123"}
-    )
-    await client.post(
-        "/api/auth/login", data={"username": email, "password": "password123"}
-    )
-
-    resp = await client.get("/api/users/me")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert "is_superuser" not in body
-    assert "is_active" not in body
-    assert "is_verified" not in body
+    assert (await client.get("/api/users/me")).status_code == 401
