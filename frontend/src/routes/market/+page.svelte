@@ -37,6 +37,8 @@
 	async function loadItem(id: number) {
 		const mine = ++seq; // ignore responses for an item the user already left
 		loadingItem = true;
+		error = null;
+		[days, listings] = [[], []]; // never show the previous item's data under this heading
 		try {
 			const [d, l] = await Promise.all([fetchDays(id), fetchListings(id)]);
 			if (mine !== seq) return;

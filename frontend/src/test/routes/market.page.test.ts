@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, waitFor } from '@testing-library/svelte';
+import { render, waitFor, fireEvent } from '@testing-library/svelte';
 import { mockFetch, restoreFetch } from '../mocks/fetch';
 import { page } from '$app/state';
 import Page from '../../routes/market/+page.svelte';
@@ -55,5 +55,28 @@ describe('market page', () => {
 		routes({ 2: [day] });
 		render(Page);
 		await waitFor(() => expect((document.querySelector('select') as HTMLSelectElement).value).toBe('2'));
+	});
+
+	it('switching items clears the old chart and a stale error', async () => {
+		(page as { url: URL }).url = new URL('http://localhost/market?item=2');
+		mockFetch({
+			'/market/items': { json: async () => items },
+			'/market/items/2/days*': { json: async () => [day] },
+			'/market/items/2/listings': { json: async () => [] },
+			'/market/items/3/days*': { status: 500 },
+			'/market/items/3/listings': { status: 500 },
+			'/market/summary': { json: async () => summary }
+		});
+		render(Page);
+		await waitFor(() => expect(document.querySelector('[data-testid="market-chart"]')).toBeTruthy());
+		const select = () => document.querySelector('select') as HTMLSelectElement;
+
+		await fireEvent.change(select(), { target: { value: '3' } });
+		await waitFor(() => expect(document.body.textContent).toContain('Could not load this item.'));
+		expect(document.querySelector('[data-testid="market-chart"]')).toBeNull();
+
+		await fireEvent.change(select(), { target: { value: '2' } });
+		await waitFor(() => expect(document.querySelector('[data-testid="market-chart"]')).toBeTruthy());
+		expect(document.body.textContent).not.toContain('Could not load this item.');
 	});
 });

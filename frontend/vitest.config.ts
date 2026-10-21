@@ -12,7 +12,7 @@ export default defineConfig({
 			'$lib/core/config.js': path.resolve(__dirname, 'src/test/mocks/config.ts'),
 			$lib: path.resolve(__dirname, 'src/lib'),
 			'$app/navigation': path.resolve(__dirname, 'src/test/mocks/app-navigation.ts'),
-			'$app/state': path.resolve(__dirname, 'src/test/mocks/app-state.ts'),
+			'$app/state': path.resolve(__dirname, 'src/test/mocks/app-state.svelte.ts'),
 			'$env/static/public': path.resolve(__dirname, 'src/test/mocks/env-static-public.ts')
 		}
 	},

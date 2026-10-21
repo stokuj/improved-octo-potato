@@ -215,3 +215,51 @@ async def test_import_requires_superuser(client: AsyncClient, make_user, login) 
     user, pwd = await make_user()
     await login(client, user.email, pwd)
     assert (await client.post("/api/market/import", files=files)).status_code == 403
+
+
+def _market_rows(name: str, item_type: int, captured_at: int, value: int) -> list[str]:
+    return [
+        f"{captured_at},{captured_at},{name},{item_type},0,ok,{d},{value},{value},{value},{value},{value}"
+        for d in range(1, 15)
+    ]
+
+
+async def test_rename_inside_one_file(superuser_client: AsyncClient, session) -> None:
+    s, t = uuid.uuid4().hex[:8], _base()
+    rows = _market_rows(f"Old {s}", t, 1792500000, 1) + _market_rows(
+        f"New {s}", t, 1792600000, 2
+    )
+    data = ("\n".join([MARKET_HEADER, *rows]) + "\n").encode()
+    res = (await upload(superuser_client, ("m.csv", data)))[0]
+    assert counts(res)[0] == "market" and res["error_count"] == 0
+    assert_sum(res)
+    item = (await session.exec(select(Item).where(Item.item_type == t))).one()
+    assert item.name == f"New {s}"
+
+
+async def test_rename_across_uploads(superuser_client: AsyncClient, session) -> None:
+    s, t = uuid.uuid4().hex[:8], _base()
+    for name, ts in ((f"Old {s}", 1792500000), (f"New {s}", 1792600000)):
+        data = (
+            "\n".join([MARKET_HEADER, *_market_rows(name, t, ts, 1)]) + "\n"
+        ).encode()
+        res = (await upload(superuser_client, ("m.csv", data)))[0]
+        assert res["error_count"] == 0
+    items = (await session.exec(select(Item).where(Item.item_type == t))).all()
+    assert [i.name for i in items] == [f"New {s}"]
+
+
+async def test_db_error_in_one_file_does_not_block_the_next(
+    superuser_client: AsyncClient,
+) -> None:
+    s, base = uuid.uuid4().hex[:8], _base()
+    overflow = f"1,1,Huge {s},{base},0,ok,14,{10**20},1,1,1,1"
+    bad = f"{MARKET_HEADER}\n{overflow}\n".encode()
+    res = await upload(
+        superuser_client,
+        ("bad.csv", bad),
+        ("listings.csv", rewrite_fixture("listings.csv", s, base)),
+    )
+    assert res[0]["errors"][0]["reason"].startswith("database error")
+    assert_sum(res[0])
+    assert counts(res[1]) == ("listings", 250, 250, 0, 0, 0)

@@ -107,3 +107,15 @@ def test_market_non_ok_needs_day_zero_and_empty_values() -> None:
     data = f"{MARKET_HEADER}\n1,1,X,5,0,error,3,,,,,\n".encode()
     p = parse_csv(data)
     assert (p.skipped, [e.line for e in p.errors]) == (0, [2])
+
+
+def test_out_of_range_timestamp_is_row_error() -> None:
+    data = f"{LISTINGS_HEADER}\n1,99999999999999,X,ok,1,10,10,1\n".encode()
+    p = parse_csv(data)
+    assert p.listings == [] and [e.line for e in p.errors] == [2]
+
+
+def test_oversized_field_is_file_error() -> None:
+    data = f'{LISTINGS_HEADER}\n1,1,"{"x" * 200_000}",ok,1,10,10,1\n'.encode()
+    with pytest.raises(CsvFormatError, match="malformed CSV"):
+        parse_csv(data)

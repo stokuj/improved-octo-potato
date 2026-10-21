@@ -68,6 +68,9 @@ async def resolve_items(
         else {}
     )
 
+    # Every resolved input name -> its item; kept apart from by_name so a rename
+    # inside one file still maps the old name's rows to the same item.
+    resolved: dict[str, Item] = {}
     for name, key in market_keys.items():
         if name not in names:
             continue
@@ -89,16 +92,18 @@ async def resolve_items(
                 errors[name] = GRADE_CONFLICT
                 continue
             by_key[key] = item
-        by_name[name] = item
+        by_name[name] = resolved[name] = item
         session.add(item)
 
     for name in listing_names & names:
-        if name not in by_name and name not in errors:
-            by_name[name] = Item(name=name)
-            session.add(by_name[name])
+        if name not in resolved and name not in errors:
+            if name not in by_name:
+                by_name[name] = Item(name=name)
+                session.add(by_name[name])
+            resolved[name] = by_name[name]
 
     await session.flush()
-    ids = {n: i.id for n, i in by_name.items() if n in names and n not in errors}
+    ids = {n: i.id for n, i in resolved.items() if n not in errors}
     return ids, errors
 
 

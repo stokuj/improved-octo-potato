@@ -88,7 +88,10 @@ def _int(value: str, name: str) -> int:
 
 def _ts(value: str) -> datetime:
     epoch = _int(value, "captured_at")
-    return datetime.fromtimestamp(epoch, timezone.utc).replace(tzinfo=None)
+    try:
+        return datetime.fromtimestamp(epoch, timezone.utc).replace(tzinfo=None)
+    except (OverflowError, OSError, ValueError):
+        raise _RowInvalid(f"captured_at out of range: {epoch}") from None
 
 
 def _listing(line: int, r: list[str]) -> ListingRow:
@@ -172,6 +175,13 @@ def parse_csv(data: bytes) -> ParsedFile:
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError:
         raise CsvFormatError("not UTF-8") from None
+    try:
+        return _read(text)
+    except csv.Error as e:  # e.g. a corrupted line with a giant field
+        raise CsvFormatError(f"malformed CSV: {e}") from None
+
+
+def _read(text: str) -> ParsedFile:
     reader = csv.reader(io.StringIO(text, newline=""))
     header = ",".join(next(reader, []))
     if header == LISTINGS_HEADER:
