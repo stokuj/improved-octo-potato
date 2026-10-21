@@ -16,6 +16,9 @@ on:
       - "frontend/svelte.config.js"
       - ".github/workflows/infra.yml"
 
+permissions:
+  contents: read
+
 jobs:
   checks:
     runs-on: ubuntu-latest
