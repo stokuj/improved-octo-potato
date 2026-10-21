@@ -6,7 +6,7 @@ from sqlmodel import SQLModel
 from alembic import context
 
 # Import models to ensure they are discovered by SQLModel.metadata
-from app.items.models import Item  # noqa: F401
+from app.market.models import Item, Listing, MarketDay  # noqa: F401
 from app.auth.models import User  # noqa: F401
 from app.core.settings import settings
 

@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 
 # Import modeli — rejestruje metadata w SQLModel
-from app.items.models import Item, ItemCategory, ItemGrade  # noqa: F401
+from app.market.models import Item, Listing, MarketDay  # noqa: F401
 from app.auth.models import User  # noqa: F401
 from app.core.db import async_session_maker
 from app.core.rate_limit import limiter
@@ -113,21 +113,6 @@ async def sample_user(session) -> User:
     await session.commit()
     await session.refresh(user)
     return user
-
-
-@pytest.fixture()
-async def sample_item(session) -> Item:
-    """Create an Item with UUID-suffixed name (UniqueConstraint name+grade)."""
-    suffix = uuid.uuid4().hex[:8]
-    item = Item(
-        name=f"sample-item-{suffix}",
-        category=ItemCategory.CRAFTING,
-        grade=ItemGrade.BASIC,
-    )
-    session.add(item)
-    await session.commit()
-    await session.refresh(item)
-    return item
 
 
 @pytest.fixture()

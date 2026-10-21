@@ -8,7 +8,7 @@ from app.auth.router import router as auth_router
 from app.core.errors import register_exception_handlers
 from app.core.rate_limit import limiter
 from app.core.settings import settings
-from app.items.router import router as items_router
+from app.market.router import router as market_router
 
 
 _is_prod = settings.environment == "prod"
@@ -34,7 +34,7 @@ register_exception_handlers(app)
 # All API routes live under /api — admin stays at /admin (sqladmin)
 api = APIRouter(prefix="/api")
 api.include_router(auth_router)
-api.include_router(items_router)
+api.include_router(market_router)
 app.include_router(api)
 
 setup_admin(app)
