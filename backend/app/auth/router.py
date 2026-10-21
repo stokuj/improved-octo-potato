@@ -4,8 +4,10 @@ from fastapi_users.router.common import ErrorCode
 
 from app.auth.backend import auth_backend
 from app.auth.dependencies import fastapi_users, get_user_manager
+from app.auth.oauth import google_client
 from app.auth.schemas import UserRead, UserUpdate
 from app.core.rate_limit import limiter
+from app.core.settings import settings
 
 router = APIRouter()
 
@@ -41,3 +43,15 @@ router.include_router(
     prefix="/users",
     tags=["users"],
 )
+if google_client is not None:
+    router.include_router(
+        fastapi_users.get_oauth_router(
+            google_client,
+            auth_backend,
+            settings.auth_secret,
+            redirect_url=f"{settings.frontend_url}/auth/callback",
+            csrf_token_cookie_secure=settings.cookie_secure,
+        ),
+        prefix="/auth/google",
+        tags=["auth"],
+    )
