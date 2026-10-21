@@ -2,6 +2,18 @@
 
 Continuity notes between sessions. Update at the end of each session.
 
+## 2026-10-21: Google-only login
+
+Branch `feature/google-login`, plan `superpowers/plans/2026-10-21-google-login.md`.
+
+- Google OAuth via fastapi-users, with a verified-email Google client and an existing-superuser-only callback. No new tables.
+- Password login only outside prod; own logout route; 7-day session.
+- sqladmin authenticates with the app cookie.
+- `/auth` Google button, `/auth/callback` page.
+- Caddy: `www` redirects to the apex; site addresses fixed to `{$VAR}` (the old `{env.*}` failed `caddy validate`).
+
+Next: the owner creates the Google OAuth client (README) and sets `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` in prod.
+
 ## 2026-10-21: ArcheMarket CSV rebuild
 
 Branch `feature/archemarket-csv` (not pushed). It implements `superpowers/plans/2026-10-21-archemarket-csv.md`, and its rulings are recorded in the plan's ledger.

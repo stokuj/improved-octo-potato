@@ -21,8 +21,8 @@ The addon is a separate repo (`ArcheMarket`); its CSV contract is described ther
 | Module | Holds |
 |---|---|
 | `core/` | settings (prod secret checks), DB engines/session, app errors, the single rate limiter, `utcnow()` |
-| `admin/` | sqladmin setup and its superuser-only login backend |
-| `auth/` | `User` model, fastapi-users wiring (cookie JWT), login, `/api/users/*`, `cli.py` (`create-superuser`) |
+| `admin/` | sqladmin setup; its auth backend accepts the app's auth cookie for superusers only |
+| `auth/` | `User` model, fastapi-users wiring (cookie JWT), Google OAuth (`oauth.py`), password login outside prod, `/api/users/*`, `cli.py` (`create-superuser`) |
 | `market/` | `Item`, `MarketDay`, `Listing`; CSV parsing (`csv_format.py`), import and read services, `/api/market/*` |
 
 Frozen reference code (not imported, routed, migrated or tested): `backend/frozen/{crafting,inventory}`, `frontend/frozen/{crafting,inventory,e2e}`.
@@ -80,7 +80,15 @@ How `/summary` is computed. "Today" is the item's newest day:
 
 - Single-user app: there are no register, forgot, reset or verify routes.
 - The admin is created, or has its password reset, with `python -m app.auth.cli create-superuser EMAIL PASSWORD` (`make create-superuser`).
-- Cookie JWT lasts 1 h. Login is limited to 5/min.
+- Cookie JWT (`fastapiusersauth`) lasts 7 days.
+- **Production signs in with Google only.** The password route `POST /api/auth/login` (5/min) is mounted only when `ENVIRONMENT != prod`, for dev and e2e. `POST /api/auth/logout` exists everywhere.
+- Google flow:
+  1. `/auth` calls `GET /api/auth/google/authorize`; the backend returns the consent URL and sets a CSRF cookie.
+  2. Google redirects the browser to `{FRONTEND_URL}/auth/callback?code&state`.
+  3. That page calls `GET /api/auth/google/callback` with the query; the backend checks state + CSRF, exchanges the code and reads the **verified primary** email (`VerifiedGoogleOAuth2`).
+  4. `UserManager.oauth_callback` signs in only an existing active superuser with that email (case-insensitive). It never creates users and stores no OAuth accounts or tokens.
+- The Google router is mounted only when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set; prod refuses to start without them.
+- `/admin` reads the same cookie; anyone else is redirected to `{FRONTEND_URL}/auth`.
 - `UserRead` exposes `is_superuser` so the frontend can show `/import`.
 
 ## Frontend (`frontend/src/`)
@@ -89,7 +97,7 @@ How `/summary` is computed. "Today" is the item's newest day:
 |---|---|
 | `lib/core/` | API base URL, auth state (Svelte 5 runes + context), `formatCurrency`, generated `api.d.ts` + `types.ts` |
 | `lib/market/` | API helpers, `chart.ts` (pure ECharts option builder), `MarketChart`, `ListingsTable`, `SummaryTable`, `ImportDropzone` |
-| `routes/` | `/` → `/market`, `/market`, `/import`, `/auth` (login only), `/about` |
+| `routes/` | `/` → `/market`, `/market`, `/import`, `/auth` (Google button; password form when `PUBLIC_PASSWORD_LOGIN=true`), `/auth/callback`, `/about` |
 
 - The chart is one ECharts instance with two stacked panels sharing the date axis: daily and 7-day average lines on top, volume bars below. It uses the SVG renderer.
 - CSP `connect-src` allows the origin of `PUBLIC_API_URL`, set in `svelte.config.js`.

@@ -46,7 +46,7 @@ CI (`.github/workflows`):
 **Backend (`backend/app/`).**
 - Domain modules each have the same core files: `models.py`, `schemas.py`, `services.py`, `router.py`, plus `admin.py` where needed. Any other file starts with a one-line reason comment.
 - Shared plumbing is in `core/`: settings with prod secret checks, DB, errors, the **single** slowapi `limiter`, and `utcnow`.
-- `auth/` holds `User` and fastapi-users with a cookie JWT. There are no register or reset routes: accounts come only from the CLI.
+- `auth/` holds `User` and fastapi-users with a 7-day cookie JWT. Prod signs in with Google only (existing active superusers, matched by verified email); the password route exists only outside prod. There are no register or reset routes: accounts come only from the CLI. `/admin` reuses the same cookie.
 - `market/` holds `Item`, `MarketDay` and `Listing`, plus the import and read API under `/api/market`.
 - `admin/` is sqladmin at `/admin`.
 - Every API route is under `/api`. Modules use each other's services, never each other's models.
@@ -68,7 +68,7 @@ These invariants must hold:
 **Frontend (`frontend/src/`).**
 - `lib/core/` holds config, auth state (runes + Svelte context), `formatCurrency`, and the generated `api.d.ts` re-exported through `types.ts`.
 - `lib/market/` holds the API helpers, `chart.ts` (a pure ECharts option builder: two stacked panels sharing the date axis, no dual-axis), and the components.
-- Routes: `/` → `/market`, `/market` (selected item in `?item=`), `/import` (superuser), `/auth` (login only).
+- Routes: `/` → `/market`, `/market` (selected item in `?item=`), `/import` (superuser), `/auth` (Google, plus the password form when `PUBLIC_PASSWORD_LOGIN=true`), `/auth/callback`.
 - CSP `connect-src` allows the origin of `PUBLIC_API_URL` (`svelte.config.js`), because dev and e2e call the API cross-origin.
 
 **Frozen code.** `backend/frozen/` and `frontend/frozen/` (crafting, inventory, the old e2e spec) are reference-only, waiting for a rebuild. They are excluded from ruff, pytest, svelte-check, vitest and Docker. Don't import from them or fix them.
@@ -76,6 +76,7 @@ These invariants must hold:
 ## Gotchas
 
 - Tests hit a real Postgres that is **not cleaned between tests**: use unique names and `item_type` values (see `rewrite_fixture` in `tests/market/test_import.py`). Create users with the `make_user` + `login` fixtures, and use `superuser_client` for admin calls. Test emails must use a real TLD like `@example.com`; `EmailStr` rejects `.local`.
+- e2e and local dev use the password form (`PUBLIC_PASSWORD_LOGIN=true`, read from `$env/dynamic/public`); no test talks to Google. Backend OAuth tests fake `google_client.get_access_token`/`get_profile`.
 - Login is rate-limited to 5/min per IP. Playwright logs in once (`e2e/auth.setup.ts` → storage state), and the rate-limit spec runs last in its own project. A quick local rerun can hit the limit.
 - Naive UTC datetimes in the DB. Money is integer copper (`bigint`), and `item_grade` is the raw game int.
 - Frontend stays on SvelteKit 2: SvelteKit 3 removes `$lib` and `svelte.config.js` (a roadmap item). Don't accept dependabot majors for kit, adapter-node or vitest without that migration.
