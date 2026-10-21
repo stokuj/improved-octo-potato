@@ -34,8 +34,8 @@ services:
     build:
       context: ../../frontend
       dockerfile: Dockerfile
-    environment:
-      PUBLIC_API_BASE_URL: http://localhost:8001
+      args:
+        PUBLIC_API_URL: http://localhost:8001/api
     ports:
       - "5174:3000"
     depends_on:

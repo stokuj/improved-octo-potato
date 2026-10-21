@@ -12,9 +12,11 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"gen:types": "openapi-typescript http://localhost:8000/openapi.json -o src/lib/core/api.d.ts",
 		"test": "vitest run",
-		"test:watch": "vitest"
+		"test:watch": "vitest",
+		"test:e2e": "playwright test -c e2e"
 	},
 	"devDependencies": {
+		"@playwright/test": "^1.64.1",
 		"@sveltejs/adapter-node": "^5.2.11",
 		"@sveltejs/kit": "^2.70.3",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",

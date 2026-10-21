@@ -16,6 +16,20 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // Order matters: login is rate-limited to 5/min per IP.
+    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
+      testIgnore: /cross-cutting\.spec\.ts/,
+    },
+    {
+      // Exhausts the login limit, so it runs last.
+      name: 'rate-limit',
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['chromium'],
+      testMatch: /cross-cutting\.spec\.ts/,
+    },
   ],
 });

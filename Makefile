@@ -115,8 +115,7 @@ e2e-migrate:
 	$(E2E_COMPOSE) exec backend-e2e uv run alembic upgrade head
 
 e2e-seed:
-	$(E2E_COMPOSE) exec -T db-e2e psql -U postgres -d app_e2e < $(ROOT_DIR)e2e/fixtures.sql
-	cd e2e && npx tsx seed.ts
+	$(E2E_COMPOSE) exec backend-e2e uv run python -m app.auth.cli create-superuser e2e-admin@example.com 'E2EPassword123!'
 
 e2e-test:
-	cd e2e && npx playwright test
+	cd $(ROOT_DIR)frontend && npm run test:e2e
