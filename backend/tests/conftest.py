@@ -1,11 +1,13 @@
 import os
 
 # Musi być PRZED importami z app — pydantic-settings czyta env przy imporcie
+# TEST_PG_HOSTPORT lets a local run point at a non-default test server.
+os.environ.setdefault("TEST_PG_HOSTPORT", "localhost:5432")
 os.environ["ASYNC_DATABASE_URL"] = (
-    "postgresql+asyncpg://postgres:postgres@localhost:5432/app_test"
+    f"postgresql+asyncpg://postgres:postgres@{os.environ['TEST_PG_HOSTPORT']}/app_test"
 )
 os.environ["DATABASE_URL"] = (
-    "postgresql+psycopg://postgres:postgres@localhost:5432/app_test"
+    f"postgresql+psycopg://postgres:postgres@{os.environ['TEST_PG_HOSTPORT']}/app_test"
 )
 os.environ["AUTH_SECRET"] = "test-secret-must-be-at-least-32-characters-here"
 os.environ["ADMIN_SESSION_SECRET"] = "test-admin-secret-must-be-32-chars-here"
@@ -20,16 +22,10 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 
 # Import modeli — rejestruje metadata w SQLModel
-from app.items.models import Item, ItemCategory, ItemGrade  # noqa: F401
-from app.prices.models import PricePoint  # noqa: F401
-from app.profiles.models import Profile  # noqa: F401
-from app.user_items.models import UserItem  # noqa: F401
-from app.users.models import User  # noqa: F401
-from app.crafting.models import Recipe, RecipeIngredient  # noqa: F401
-from app.user_inventory.models import UserInventory  # noqa: F401
-from app.config.db import async_session_maker
-from app.config.rate_limit import limiter
-from app.config.settings import settings as settings_singleton
+from app.market.models import Item, Listing, MarketDay  # noqa: F401
+from app.auth.models import User  # noqa: F401
+from app.core.db import async_session_maker
+from app.core.rate_limit import limiter
 from app.main import app
 
 _TEST_URL = os.environ["ASYNC_DATABASE_URL"]
@@ -40,7 +36,9 @@ async def setup_database():
     # NullPool disables connection reuse between tests — prevents leaked state
     engine = create_async_engine(_TEST_URL, poolclass=NullPool)
     async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
+        # drop_all cannot remove tables of deleted models that still have FKs to ours.
+        await conn.execute(text("DROP SCHEMA public CASCADE"))
+        await conn.execute(text("CREATE SCHEMA public"))
         await conn.run_sync(SQLModel.metadata.create_all)
     yield
     async with engine.begin() as conn:
@@ -105,7 +103,7 @@ async def sample_user(session) -> User:
 
     suffix = uuid.uuid4().hex[:8]
     user = User(
-        email=f"user-{suffix}@test.local",
+        email=f"user-{suffix}@example.com",
         hashed_password=PasswordHelper().hash(f"pwd-{suffix}"),
         is_active=True,
         is_superuser=False,
@@ -118,99 +116,13 @@ async def sample_user(session) -> User:
 
 
 @pytest.fixture()
-async def sample_item(session) -> Item:
-    """Create an Item with UUID-suffixed name (UniqueConstraint name+grade)."""
-    suffix = uuid.uuid4().hex[:8]
-    item = Item(
-        name=f"sample-item-{suffix}",
-        category=ItemCategory.CRAFTING,
-        grade=ItemGrade.BASIC,
-    )
-    session.add(item)
-    await session.commit()
-    await session.refresh(item)
-    return item
-
-
-@pytest.fixture()
-async def sample_leaf_item(session) -> Item:
-    """Distinct Item fixture used as a leaf (no recipe) ingredient."""
-    suffix = uuid.uuid4().hex[:8]
-    item = Item(
-        name=f"leaf-item-{suffix}",
-        category=ItemCategory.OTHER,
-        grade=ItemGrade.BASIC,
-    )
-    session.add(item)
-    await session.commit()
-    await session.refresh(item)
-    return item
-
-
-@pytest.fixture()
-async def item_with_broken_recipe(session) -> Item:
-    """Item + Recipe + RecipeIngredient referencing a non-existent ingredient_item_id.
-
-    PG enforces FK constraints; we bypass via `session_replication_role = replica`
-    (requires superuser — test DB connects as `postgres`, which qualifies).
-    """
-    suffix = uuid.uuid4().hex[:8]
-    item = Item(
-        name=f"broken-recipe-item-{suffix}",
-        category=ItemCategory.CRAFTING,
-        grade=ItemGrade.BASIC,
-    )
-    session.add(item)
-    await session.commit()
-    await session.refresh(item)
-
-    recipe = Recipe(item_id=item.id, output_qty=1)
-    session.add(recipe)
-    await session.commit()
-    await session.refresh(recipe)
-
-    # Bypass FK to insert dangling ingredient reference
-    conn = await session.connection()
-    await conn.execute(text("SET session_replication_role = replica"))
-    try:
-        await conn.execute(
-            text(
-                "INSERT INTO recipeingredient (recipe_id, ingredient_item_id, quantity)"
-                " VALUES (:rid, :iid, :qty)"
-            ),
-            {"rid": recipe.id, "iid": 10**9, "qty": 1},
-        )
-        await session.commit()
-    finally:
-        conn2 = await session.connection()
-        await conn2.execute(text("SET session_replication_role = DEFAULT"))
-        await session.commit()
-
-    return item
-
-
-@pytest.fixture()
-def ingest_token(monkeypatch) -> str:
-    """Provide an INGEST_TOKEN env var + settings attribute for ingest endpoints.
-
-    NOTE: `settings.ingest_token` attribute is added in Task 0.6. We use
-    `raising=False` so this fixture is forward-compatible — env var is the
-    source of truth until the settings field lands.
-    """
-    token = f"test-ingest-{uuid.uuid4().hex}"
-    monkeypatch.setenv("INGEST_TOKEN", token)
-    monkeypatch.setattr(settings_singleton, "ingest_token", token, raising=False)
-    return token
-
-
-@pytest.fixture()
 async def sample_superuser(session) -> User:
     """Create a superuser with UUID-suffixed email and bcrypt password hash."""
     from fastapi_users.password import PasswordHelper
 
     suffix = uuid.uuid4().hex[:8]
     user = User(
-        email=f"super-{suffix}@test.local",
+        email=f"super-{suffix}@example.com",
         hashed_password=PasswordHelper().hash(f"pwd-{suffix}"),
         is_active=True,
         is_superuser=True,
@@ -223,28 +135,47 @@ async def sample_superuser(session) -> User:
 
 
 @pytest.fixture()
-async def superuser_client() -> AsyncClient:
-    """Fresh AsyncClient authenticated as a superuser.
+def make_user(session):
+    """Create a user straight in the DB (registration is off). Returns (user, password)."""
+    from fastapi_users.password import PasswordHelper
 
-    Creates a separate client (not reusing the shared ``client`` fixture)
-    to avoid poisoning ``client``'s cookie jar with superuser credentials.
-    """
+    async def _make(
+        email: str | None = None,
+        password: str = "pwd-12345678",
+        superuser: bool = False,
+    ) -> tuple[User, str]:
+        user = User(
+            email=email or f"user-{uuid.uuid4().hex[:8]}@example.com",
+            hashed_password=PasswordHelper().hash(password),
+            is_active=True,
+            is_superuser=superuser,
+            is_verified=True,
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        return user, password
+
+    return _make
+
+
+@pytest.fixture()
+def login():
+    async def _login(c: AsyncClient, email: str, password: str) -> None:
+        r = await c.post(
+            "/api/auth/login", data={"username": email, "password": password}
+        )
+        assert r.status_code == 204, r.text
+
+    return _login
+
+
+@pytest.fixture()
+async def superuser_client(make_user, login) -> AsyncClient:
+    """Separate client logged in as a superuser, so ``client``'s cookies stay clean."""
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as c:
-        suffix = uuid.uuid4().hex[:8]
-        email = f"super-login-{suffix}@test.com"
-        password = "supertest-pwd-123"
-        await c.post("/api/auth/register", json={"email": email, "password": password})
-        from app.config.db import async_session_maker
-        from app.users.models import User as UserModel
-        from sqlmodel import select
-
-        async with async_session_maker() as s:
-            u = (await s.exec(select(UserModel).where(UserModel.email == email))).one()
-            u.is_superuser = True
-            s.add(u)
-            await s.commit()
-
-        await c.post("/api/auth/login", data={"username": email, "password": password})
+        user, pwd = await make_user(superuser=True)
+        await login(c, user.email, pwd)
         yield c

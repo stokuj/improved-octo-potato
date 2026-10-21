@@ -29,8 +29,12 @@ jobs:
 
       - name: create env for type check
         working-directory: frontend
-        run: cp .env.example .env
+        run: echo "PUBLIC_API_URL=http://localhost:8000/api" > .env
 
       - name: svelte-check
         working-directory: frontend
         run: npm run check
+
+      - name: vitest
+        working-directory: frontend
+        run: npm test

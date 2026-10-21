@@ -12,8 +12,9 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "backend/Dockerfile"
-      - "frontend/Dockerfile"
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/docker.yml"
 
 jobs:
   build-backend:

@@ -1,93 +1,95 @@
 # Architecture
 
-## System Overview
+## System overview
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Player's PC                          │
-│                                                         │
-│  ArcheRage Game                                         │
-│  └── Lua Addon (pricetracker_folio)                     │
-│       └── writes prices.jsonl ──► Watcher daemon        │
-│                                        │                │
-└────────────────────────────────────────┼────────────────┘
-                                         │ HTTP POST /api/ingest/prices
-                                         ▼
-┌─────────────────────────────────────────────────────────┐
-│                      Server                             │
-│                                                         │
-│  Caddy (TLS termination + reverse proxy)                │
-│   ├── /api/*  /admin  /docs  → FastAPI backend          │
-│   └── /*                    → SvelteKit frontend        │
-│                                                         │
-│  FastAPI backend                                        │
-│   ├── /api/ingest/prices   (no auth, rate-limited)      │
-│   ├── /api/items/          (public read)                │
-│   ├── /api/prices/         (authenticated write)        │
-│   ├── /api/crafting/       (authenticated)              │
-│   ├── /api/user-items/     (authenticated)              │
-│   ├── /api/inventory/     (authenticated)              │
-│   └── /admin               (superuser only)             │
-│                                                         │
-│  PostgreSQL                                             │
-└─────────────────────────────────────────────────────────┘
-                        ▲
-                        │ HTTP (slash commands)
-              Discord Bot (discord_bot/)
+Player's PC                                   Server
+───────────                                   ──────
+ArcheRage + ArcheMarket addon                 Caddy (TLS, headers)
+  └─ writes listings.csv, market.csv           ├─ /api/*   → FastAPI backend
+                                               ├─ /admin*  → FastAPI (sqladmin, IP allowlist)
+Browser                                        └─ /*       → SvelteKit (adapter-node)
+  └─ /import: drag & drop both CSVs ─────────► POST /api/market/import (superuser)
+  └─ /market: charts and tables  ◄──────────── GET  /api/market/*      (public)
+                                              PostgreSQL 16
 ```
 
-## Data Flow: Price Ingestion
+The addon is a separate repo (`ArcheMarket`); its CSV contract is described there (`llm-wiki/project/step7-design.md`, `step7b-design.md`). Nothing uploads automatically: the user uploads files by hand.
 
-1. **Lua addon** hooks `AUCTION_ITEM_SEARCHED` in-game, writes one JSONL row per scan to `prices.jsonl`
-2. **Watcher** tails the file from a persisted byte offset, batches rows, POSTs to `/api/ingest/prices`
-3. **Ingest endpoint** calls `match_or_create_item` (upsert by name+grade), then `add_price_point`; updates `Item.current_price` atomically; returns partial-success response
-4. **Frontend** chart queries `PricePoint` filtered by `source='ah'`
+## Backend modules (`backend/app/`)
 
-Alternatively, the **Discord bot** (`/addprice`) POSTs directly to `/api/ingest/prices` — same endpoint, same contract.
+| Module | Holds |
+|---|---|
+| `core/` | settings (prod secret checks), DB engines/session, app errors, the single rate limiter, `utcnow()` |
+| `admin/` | sqladmin setup and its superuser-only login backend |
+| `auth/` | `User` model, fastapi-users wiring (cookie JWT), login, `/api/users/*`, `cli.py` (`create-superuser`) |
+| `market/` | `Item`, `MarketDay`, `Listing`; CSV parsing (`csv_format.py`), import and read services, `/api/market/*` |
 
-## Backend Module Boundaries
+Frozen reference code (not imported, routed, migrated or tested): `backend/frozen/{crafting,inventory}`, `frontend/frozen/{crafting,inventory,e2e}`.
+
+## Database schema
 
 ```
-app/
- ├── config/         # db engines, settings, rate_limit singleton
- ├── auth/           # fastapi-users wiring; login returns 204
- ├── users/          # User model + router
- ├── profiles/       # Profile 1-to-1 with User, auto-created on register
- ├── items/          # Item model + CRUD; current_price is denormalized
- ├── prices/         # PricePoint append-only time-series
- ├── user_items/     # watchlist (User ↔ Item many-to-many)
- ├── crafting/       # Recipe + RecipeIngredient; recursive profit calculator
- ├── user_inventory/ # per-user item quantities; upsert (quantity=0 → delete); for-recipe lookup
- ├── ingest/         # public write endpoint; grade_map; partial-success contract
- └── admin/          # sqladmin ModelAdmin registrations
+user        id uuid PK, email UNIQUE, hashed_password, is_active, is_superuser, is_verified
+item        id PK, item_type int NULL, item_grade int NULL, name varchar(120), created_at
+            UNIQUE (item_type, item_grade), UNIQUE (name)
+market_day  PK (item_id → item.id, day date), daily_avg, weekly_avg, min, max, volume (bigint),
+            scan_id bigint, captured_at timestamp
+listing     PK (item_id → item.id, scan_id bigint, rank smallint), captured_at, status,
+            unit_price bigint NULL, listing_price bigint NULL, stack int NULL
 ```
 
-Each module is self-contained. Cross-module imports go through services, not directly between models.
+One Alembic baseline (`0001_baseline`). Copper is stored as integers (1 g = 10 000 c). `item_grade` is the raw game int (`ITEM_GRADE_TYPE`, 0 for most materials).
 
-## Key Invariants
+## Import flow (`POST /api/market/import`)
 
-- **`source='ah'`** must be used consistently by seed, watcher, bot, and frontend chart. `test_consistency.py` enforces this.
-- **`Item.current_price`** is always updated in the same transaction as the new `PricePoint` insert — never update one without the other.
-- **`slowapi.Limiter`** is a singleton in `app/config/rate_limit.py`. Only one instance must exist; `app.state.limiter` and all `@limiter.limit()` decorators share it.
-- **Naive UTC** everywhere in the DB. Never store timezone-aware datetimes; strip `tzinfo` before write.
-- **Ingest partial success**: bad rows return 200 with `errors[]`, not 4xx. The watcher advances its offset on any 2xx. Only 429 and 5xx trigger retry with backoff.
-- **`session.rollback()`** after a failed `add_price_point` — without it, the SQLAlchemy session stays in a failed-transaction state and poisons subsequent rows in the same batch.
-- **`CraftResult.batch_profit`** is total profit for the entire batch (market_price × output_qty × multiplier − total_material_cost), not per single craft.
-- **`UserInventory` upsert**: `quantity > 0` uses `ON CONFLICT DO UPDATE` (atomic); `quantity = 0` issues a direct DELETE (also atomic). Never use SELECT-then-delete.
+1. Each uploaded file (50 MB cap, rate limit 10/min) is parsed by `csv_format.parse_csv`:
+   - the type comes from the exact header row;
+   - quoted names follow RFC 4180;
+   - a BOM and CRLF are accepted;
+   - each row is validated, and a bad row becomes `{line, reason}` while the rest still imports.
+2. Items are resolved by `(item_type, item_grade)` first, then by `name`. A name already owned by another grade is a row error.
+3. **market.csv:** `day_date = date(captured_at in Moscow time) − (14 − day)`, because the server runs on UTC+3 and day 14 is today.
+   - Rows are deduplicated in memory by `(item_id, day_date)`, and the newest `captured_at` wins.
+   - They are then upserted with `ON CONFLICT … DO UPDATE … WHERE stored.captured_at < new.captured_at`.
+4. **listings.csv:** bulk `INSERT … ON CONFLICT DO NOTHING`.
+5. Each file is one transaction, written in chunks of 2 000 rows (asyncpg bind-param limit).
 
-## Frontend State Management
+### Invariants
 
-SvelteKit 5 runes (`$state`, `$derived`) — no external store library. Auth state lives in `src/lib/auth.svelte.js` and is checked once in `+layout.svelte`. All fetches use `credentials: 'include'` for the JWT cookie set by the backend.
+- **Idempotent:** re-uploading a file changes nothing (`inserted = updated = 0`).
+- **Newest scan wins** per (item, date). An older scan never overwrites a newer one.
+- **Sum rule:** per file, `inserted + updated + skipped + error_count == rows`. A whole-file failure (empty, not UTF-8, unknown header, too large, DB error) is one `errors` entry at line 0 with `error_count = rows`.
+- At most 100 errors are listed; `error_count` is the total.
 
-## Separate Python Projects
+## Read API (`/api/market`, public)
 
-Two independent Python projects each with their own `pyproject.toml` and `uv.lock`:
+| Endpoint | Returns |
+|---|---|
+| `GET /items` | items with any data, plus `last_day` |
+| `GET /items/{id}/days?days=14` | the last N days, oldest first |
+| `GET /items/{id}/listings` | the newest scan's rows, by rank |
+| `GET /summary` | one row per item with market data |
 
-| Directory | Purpose | Key dep |
-|---|---|---|
-| `backend/` | FastAPI app | fastapi, sqlmodel, fastapi-users, slowapi |
-| `discord_bot/` | Slash command bot | discord.py, httpx |
+How `/summary` is computed. "Today" is the item's newest day:
+- `avg_7d` is the `weekly_avg` of the day before today. The game's weekly average includes the day itself, so this keeps the partial day out.
+- `change_pct = (today_avg − avg_7d) / avg_7d`.
+- `avg_daily_volume` is the mean volume of the 7 days before today.
 
-> `watcher/` has been removed. Manual price ingestion goes via Discord bot `/addprice` or direct POST to `/api/ingest/prices`.
+## Auth
 
-Run `uv run ...` from within each project directory. Do not mix their virtual environments.
+- Single-user app: there are no register, forgot, reset or verify routes.
+- The admin is created, or has its password reset, with `python -m app.auth.cli create-superuser EMAIL PASSWORD` (`make create-superuser`).
+- Cookie JWT lasts 1 h. Login is limited to 5/min.
+- `UserRead` exposes `is_superuser` so the frontend can show `/import`.
+
+## Frontend (`frontend/src/`)
+
+| Path | Holds |
+|---|---|
+| `lib/core/` | API base URL, auth state (Svelte 5 runes + context), `formatCurrency`, generated `api.d.ts` + `types.ts` |
+| `lib/market/` | API helpers, `chart.ts` (pure ECharts option builder), `MarketChart`, `ListingsTable`, `SummaryTable`, `ImportDropzone` |
+| `routes/` | `/` → `/market`, `/market`, `/import`, `/auth` (login only), `/about` |
+
+- The chart is one ECharts instance with two stacked panels sharing the date axis: daily and 7-day average lines on top, volume bars below. It uses the SVG renderer.
+- CSP `connect-src` allows the origin of `PUBLIC_API_URL`, set in `svelte.config.js`.

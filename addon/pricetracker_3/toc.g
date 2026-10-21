@@ -1,2 +1,0 @@
-apitypes.lua
-pricetracker.lua

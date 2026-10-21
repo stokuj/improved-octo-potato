@@ -1,45 +1,50 @@
-# Stack Decisions
+# Stack
 
-## Backend
+## Backend (`backend/pyproject.toml`)
 
-| Tech | Wersja | Powód wyboru |
+| Tech | Version | Why |
 |---|---|---|
-| FastAPI | ≥0.135 | Async-first, auto OpenAPI schema (używamy do generowania api.d.ts) |
-| SQLModel | ≥0.0.38 | ORM łączący SQLAlchemy + Pydantic — jeden model dla DB i schematu |
-| fastapi-users | ≥15.0.5 | Auth out-of-the-box: register/login/cookie session, unikamy pisania auth ręcznie |
-| Alembic | ≥1.13 | Migracje schematu DB |
-| asyncpg + psycopg[binary] | — | asyncpg dla runtime, psycopg dla alembic sync migrations |
-| slowapi | ≥0.1.9 | Rate limiting (singleton w `app/config/rate_limit.py`) |
-| sqladmin | ≥0.24 | Panel admina pod `/admin`, bez pisania UI |
-| PostgreSQL 16 | alpine | Jedyna baza; naive UTC timestamps |
-| uv | — | Szybki package manager; każdy projekt ma własny pyproject.toml + uv.lock |
-| pytest-asyncio | — | Async testy z prawdziwą bazą (nie mocki) |
-| ruff | — | Linter |
+| Python | 3.13 | |
+| FastAPI | ≥0.135 | async, OpenAPI → generated frontend types |
+| SQLModel | ≥0.0.38 | one model for DB and schema |
+| fastapi-users | ≥15.0.5 | cookie JWT login, users routes |
+| Alembic | ≥1.13 | migrations (single baseline since the CSV rebuild) |
+| asyncpg + psycopg | | asyncpg at runtime, psycopg for Alembic |
+| slowapi | ≥0.1.9 | rate limiting (one limiter in `app/core/rate_limit.py`) |
+| sqladmin | ≥0.27 | `/admin` (read-only views) |
+| PostgreSQL | 16 | naive-UTC timestamps |
+| uv, ruff, pytest(-asyncio) | | package manager, lint/format, tests on a real Postgres |
 
-## Frontend
+## Frontend (`frontend/package.json`)
 
-| Tech | Wersja | Powód wyboru |
+| Tech | Version | Why |
 |---|---|---|
-| SvelteKit 5 | ≥2.57 | Runes API (`$state`, `$derived`) — brak zewnętrznego store managera |
-| Tailwind CSS 4 | ≥4.2 | Utility-first CSS |
-| DaisyUI 5 | ≥5.5 | Komponenty UI, theme: `night` |
-| ECharts + svelte-echarts | 5.6 / 1.0 | Wykresy cen; markLine dla material cost reference |
-| openapi-typescript | ≥7.13 | Generuje `src/lib/api.d.ts` z `/openapi.json`; zero ręcznych typów API |
-| adapter-node | ≥5.2 | Produkcyjny build jako Node.js server |
-| TypeScript strict | ≥6.0 | `lang="ts"` we wszystkich komponentach; importy z `api.d.ts` |
+| SvelteKit | ^2.70.3 | runes; adapter-node for prod |
+| Svelte | ^5.55 | |
+| Vite | ^8 | |
+| TypeScript | ~5.6 | strict |
+| Tailwind CSS 4 + DaisyUI 5 | | theme `night` |
+| ECharts | ^6.1 | used directly (no wrapper), SVG renderer |
+| vitest 4 + Testing Library | | unit/component tests |
+| Playwright | ^1.64 | e2e in `frontend/e2e/` |
+| openapi-typescript | via npx | generates `src/lib/core/api.d.ts` |
+
+SvelteKit 3 is not adopted yet. It removes `$lib` (use `#lib`), moves `svelte.config.js` into the Vite plugin and changes `$env`. That migration is a roadmap item.
 
 ## Infra
 
-| Tech | Rola |
+| Tech | Role |
 |---|---|
-| Podman Compose | Konteneryzacja (nie docker compose — używamy `podman compose`) |
-| Caddy 2 | TLS termination + reverse proxy; `/api/*` i `/admin*` → backend, reszta → frontend |
-| podman compose dev | 3 serwisy: db, backend (--reload), frontend (npm dev) |
-| podman compose prod | 4 serwisy: db, backend (2 workers), frontend (node build), caddy |
+| Podman compose | local dev/prod/e2e via the Makefile (`docker compose` in GitHub CI) |
+| Caddy 2 | TLS, security headers, `/api/*` and `/admin*` → backend, rest → frontend |
+| dev compose | db, backend (`--reload`), frontend (`npm run dev`) |
+| prod compose | db, backend (2 workers), frontend (node build), caddy |
+| e2e compose | db-e2e :5433, backend-e2e :8001, frontend-e2e :5174 |
 
-## Decyzje odrzucone
+## Rejected
 
-- **Watcher daemon** — usunięty; ceny wchodzą przez Discord bot lub bezpośredni POST
-- **External store (Pinia/Zustand)** — zastąpiony przez Svelte 5 runes
-- **SQLite w testach** — testy biją w prawdziwy PostgreSQL (test DB: `app_test`)
-- **Mock DB w testach** — historia: mocki ukryły błąd migracji produkcyjnej; od tej pory integracyjne
+- **Automatic upload** (watcher, collector, API token): the user uploads CSVs by hand.
+- **Discord bot, JSONL ingest, `pricetracker*` addons:** removed in the ArcheMarket rebuild.
+- **External store library:** Svelte 5 runes are enough.
+- **SQLite or DB mocks in tests:** tests use a real Postgres. Mocks once hid a production migration bug.
+- **Dual-axis charts:** two measures go in two panels.

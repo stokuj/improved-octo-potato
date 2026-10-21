@@ -1,0 +1,73 @@
+name: e2e
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "infra/**"
+      - ".github/workflows/e2e.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "infra/**"
+      - ".github/workflows/e2e.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    # Informational until the suite has proven stable.
+    continue-on-error: true
+    env:
+      COMPOSE: docker compose -f infra/compose/docker-compose.e2e.yml
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: start e2e stack
+        run: $COMPOSE up -d --build
+
+      - name: wait for backend (runs migrations on start)
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8001/openapi.json > /dev/null && exit 0
+            sleep 2
+          done
+          $COMPOSE logs backend-e2e
+          exit 1
+
+      - name: create e2e superuser
+        run: $COMPOSE exec -T backend-e2e uv run python -m app.auth.cli create-superuser e2e-admin@example.com 'E2EPassword123!'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: install chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: playwright
+        working-directory: frontend
+        run: npm run test:e2e
+
+      - name: upload report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            frontend/e2e/playwright-report
+            frontend/e2e/test-results
+          retention-days: 7

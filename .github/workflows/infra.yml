@@ -1,0 +1,29 @@
+name: infra
+
+on:
+  push:
+    paths:
+      - "infra/**"
+      - "backend/Dockerfile"
+      - "frontend/Dockerfile"
+      - "frontend/svelte.config.js"
+      - ".github/workflows/infra.yml"
+  pull_request:
+    paths:
+      - "infra/**"
+      - "backend/Dockerfile"
+      - "frontend/Dockerfile"
+      - "frontend/svelte.config.js"
+      - ".github/workflows/infra.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: infra checks
+        run: for t in infra/tests/*.sh; do bash "$t" || exit 1; done

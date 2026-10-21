@@ -5,22 +5,17 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class UserRead(BaseModel):
-    """Hand-rolled to suppress is_active / is_verified / is_superuser leakage.
+    """Hand-rolled so is_active / is_verified stay out of the API.
 
-    fastapi-users only needs ``response_model`` to be a valid pydantic schema; it does
-    not require subclassing ``BaseUser``. Inheriting from ``BaseUser`` previously
-    caused those internal flags to appear in the generated OpenAPI spec even though
-    a ``@model_serializer`` stripped them at runtime, producing client/server drift.
+    is_superuser is exposed: it is the caller's own flag and the frontend uses
+    it to show the import page. Subclassing ``BaseUser`` would leak the rest.
     """
 
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
     email: EmailStr
-
-
-class UserCreate(fu_schemas.BaseUserCreate):
-    pass
+    is_superuser: bool
 
 
 class UserUpdate(fu_schemas.BaseUserUpdate):

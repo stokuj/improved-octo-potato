@@ -1,10 +1,11 @@
+# fastapi-users cookie/JWT backend.
 from fastapi_users.authentication import (
     AuthenticationBackend,
     CookieTransport,
     JWTStrategy,
 )
 
-from app.config.settings import settings
+from app.core.settings import settings
 
 cookie_transport = CookieTransport(
     cookie_max_age=3600,
