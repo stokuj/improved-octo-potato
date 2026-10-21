@@ -23,6 +23,7 @@ services:
       AUTH_SECRET: e2e-secret-must-be-at-least-32-characters-here
       ADMIN_SESSION_SECRET: e2e-admin-secret-must-be-32-chars-here
       CORS_ORIGINS: '["http://localhost:5174"]'
+      FRONTEND_URL: http://localhost:5174
       ENVIRONMENT: dev
     ports:
       - "8001:8000"
