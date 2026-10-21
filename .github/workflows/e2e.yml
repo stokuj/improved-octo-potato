@@ -16,6 +16,9 @@ on:
       - "infra/**"
       - ".github/workflows/e2e.yml"
 
+permissions:
+  contents: read
+
 jobs:
   playwright:
     runs-on: ubuntu-latest
