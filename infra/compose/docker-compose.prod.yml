@@ -47,18 +47,6 @@ services:
         PUBLIC_API_URL: https://${APP_DOMAIN}/api
     restart: unless-stopped
 
-  discord_bot:
-    build: ../../discord_bot
-    restart: unless-stopped
-    environment:
-      DISCORD_TOKEN: ${DISCORD_TOKEN:?DISCORD_TOKEN is required}
-      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
-      INGEST_TOKEN: ${INGEST_TOKEN:?INGEST_TOKEN is required}
-      API_URL: http://backend:8000/api
-    depends_on:
-      backend:
-        condition: service_started
-
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
