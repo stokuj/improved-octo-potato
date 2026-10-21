@@ -1,40 +1,21 @@
 # Roadmap
 
-## Zrealizowane
+## Done
 
-| Ficzer | Opis |
+| Feature | Notes |
 |---|---|
-| Auth | Rejestracja, logowanie, cookie session (fastapi-users) |
-| Items | Lista z paginacją/filtrami, szczegół, search case-insensitive |
-| Price history | ECharts line chart, interwały raw/5m/1h/1d, markLine material cost |
-| Saved Items | Follow/unfollow (user_items), watchlist page |
-| Crafting system | Receptury, kalkulator profitu, RecipeTree, RecipeCard |
-| Ingest API | Bulk endpoint `/api/ingest/prices`, grade mapping, partial-success |
-| Discord bot | Slash commands `/price` i `/addprice`, 21 testów |
-| Item detail redesign | Dwukolumnowy layout, profit hero card, full-width recipe tree |
-| Recipe UX | Inline "Have" column, Total Labour footer, usunięty Follow z recipe view |
-| User Inventory | Model, 3 endpointy, strona `/inventory`, integracja z recipe tree |
-| TypeScript migration | `api.d.ts` z openapi-typescript, rename `.js→.ts`, `lang="ts"` wszędzie |
-| Settings page | Edycja display_name, is_private |
-| Admin panel | sqladmin pod `/admin` |
-| Seed data | 29 itemów + drzewo receptur + 30d historia cen |
-| Infra | Podman compose dev + prod, Caddy, Makefile |
-| Test suite expansion | +28 backend, +38 frontend, +20 e2e Playwright specs (2026-05-22) |
+| ArcheMarket CSV rebuild (2026-10-21) | Manual upload of `listings.csv` and `market.csv`, idempotent import, `/market` with a 14-day chart, offers and a today-vs-7-days table. Bot, addons, ingest, prices, watchlist and profiles removed. Spec: `superpowers/specs/2026-10-21-archemarket-csv-design.md` |
+| Auth | Single admin account, cookie JWT, `create-superuser` CLI |
+| Admin panel | sqladmin at `/admin`, read-only market views |
+| Infra | Podman compose dev/prod/e2e, Caddy, Makefile, CI (ruff, pytest, alembic check, svelte-check, vitest, docker builds, infra checks, non-blocking e2e) |
 
-## W trakcie / do merge
+## Planned
 
-| Gałąź | Zawartość |
-|---|---|
-| `feature/user-inventory` | Kompletny user inventory + TypeScript migration — gotowy do merge do main |
-
-## Planowane
-
-| Ficzer | Priorytet | Uwagi |
+| Feature | Priority | Notes |
 |---|---|---|
-| pricetracker_folio (Lua addon) | wysoki | Addon do ArcheRage zapisujący ceny do JSONL; osobne repo |
-| Watcher daemon | średni | Zastąpiony botem, ale dla automatyzacji może wrócić |
-| `aiosqlite` cleanup | niski | Zależność bez użycia — relikt z early dev |
-| `mockData.ts` cleanup | niski | Martwy plik w frontend lib |
-| `InventoryModal.svelte` | niski | Komponent bez importera — usunąć lub podpiąć |
-| Avatar URL walidacja | niski | Brak max_length na Profile.avatar_url |
-| `/saved-items` redirect | niski | Brak early redirect przed fetch (drobne UX) |
+| Rebuild crafting and inventory on the new item/price model | high | Reference code: `backend/frozen`, `frontend/frozen`. Buy price = cheapest listing `unit_price`, sell price = `daily_avg`. Bag prices come from ArcheMarket step 7c |
+| Graded items | medium | ArcheMarket must first write `item_type`/`item_grade` in `listings.csv`. Then key items on `(item_type, item_grade)` only, and drop `UNIQUE(name)` |
+| SvelteKit 3 migration | medium | `$lib` → `#lib`, config from `svelte.config.js` into the Vite plugin, new `$app/env`. Fixes 3 low-severity `npm audit` advisories (cookie via kit 2) |
+| Verify the Moscow game day | low | Two scans around Moscow midnight (about 22:00 CET) to confirm when day 14 rolls over |
+| ESLint + Prettier, Python type checker | low | Not set up yet |
+| Make e2e blocking in CI | low | Once the suite has been stable for a while |

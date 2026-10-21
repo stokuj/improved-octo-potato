@@ -1,44 +1,44 @@
 # Constitution
 
-Zasady niezmienne projektu. Zmieniaj tylko po przemyślanej decyzji i z komentarzem dlaczego.
+Rules that do not change without a deliberate decision. When you change one, record why.
 
 ## API
 
-- Wszystkie endpointy pod `/api/` — admin pod `/admin` (nie pod `/api`)
-- Ingest endpoint (`/api/ingest/prices`) jest **bez auth** — tylko rate limit 60/min
-- Partial success: ingest zawsze zwraca 200 z `errors[]`, nigdy 4xx dla złych wierszy
-- `source='ah'` musi być używane spójnie przez seed, bota i frontend chart
+- All endpoints live under `/api/`; the admin is at `/admin`, not under `/api`.
+- Only a superuser can import (`POST /api/market/import`). Market reads are public.
+- The import is idempotent: the same file uploaded twice changes nothing.
+- Newest scan wins per (item, date). An older scan never overwrites newer data.
+- Every data line of an upload is accounted for: `inserted + updated + skipped + error_count == rows`.
 
-## Baza danych
+## Database
 
-- **Naive UTC** wszędzie — nigdy timezone-aware datetime w DB
-- `Item.current_price` aktualizowany **w tej samej transakcji** co nowy PricePoint
-- `UserInventory` upsert: quantity > 0 → ON CONFLICT UPDATE; quantity = 0 → DELETE
-- Po failed `add_price_point` zawsze `session.rollback()` — bez tego session trucizna dla batcha
+- Naive UTC everywhere. Never store timezone-aware datetimes.
+- Copper is stored as integers, with `bigint` for prices and volume.
+- An item's natural key is `(item_type, item_grade)`. Its name is unique while only single-grade items are tracked.
+- A schema change needs an Alembic migration, and `alembic check` must stay clean.
 
-## Kod
+## Code
 
-- Rate limiter (`slowapi.Limiter`) — **jeden singleton** w `app/config/rate_limit.py`
-- `formatCurrency` i `LABOUR_ITEM_NAME` — importuj z shared lib, nigdy nie redefiniuj lokalnie
-- Cross-module imports przez services, nie bezpośrednio między modelami
-- `GET /api/inventory/for-recipe/{item_id}` rejestrowany PRZED `PUT /api/inventory/{item_id}`
+- One rate limiter singleton, in `app/core/rate_limit.py`.
+- Import `formatCurrency` from the shared lib; never redefine it.
+- Modules talk to each other through services, not through each other's models.
+- Every module has the same core file set. Any extra file states its reason in its first line.
+- Frozen code (`*/frozen/`) is not imported or edited outside a planned rebuild.
 
-## Testy
+## Tests
 
-- Testy biją w prawdziwy PostgreSQL (`app_test`) — bez mocków bazy
-- UUID suffix we wszystkich nazwach itemów w testach (UniqueConstraint name+grade)
-- DB nie jest czyszczona między testami — każdy test musi być izolowany przez unikalne dane
+- Tests use a real PostgreSQL (`app_test`), with no DB mocks.
+- Test data is unique: the DB is not cleaned between tests.
+- Tests mirror the code layout.
 
-## Git & Workflow
+## Git & workflow
 
-- Nigdy nie commituj bezpośrednio do `main`
-- Nigdy nie pushuj bez wyraźnej instrukcji od użytkownika
-- Format: `typ(scope): opis` (feat, fix, chore, docs, refactor)
-- Nietrywalna zmiana → Plan Mode → czekaj na zatwierdzenie
+- Never commit directly to `main`. Never push or merge without an explicit request.
+- Commit format: `type(scope): description` (feat, fix, chore, docs, refactor, test, ci).
+- Non-trivial change: design, then plan, then implementation, with approval in between.
 
 ## Infra
 
-- Podman Compose (nie docker compose)
-- Caddy jako TLS terminator + reverse proxy
-- Dev: 3 serwisy (db, backend --reload, frontend dev)
-- Prod: 4 serwisy (db, backend 2 workers, frontend node, caddy)
+- Podman compose locally, docker compose in CI, same compose files.
+- Caddy terminates TLS and proxies traffic.
+- Dev runs 3 services (db, backend `--reload`, frontend dev). Prod runs 4 (db, backend with 2 workers, frontend node, caddy).

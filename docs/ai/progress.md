@@ -1,30 +1,20 @@
 # Progress
 
-Notatki ciągłości między sesjami. Aktualizuj na końcu każdej sesji.
+Continuity notes between sessions. Update at the end of each session.
 
-## Stan na 2026-05-20
+## 2026-10-21: ArcheMarket CSV rebuild
 
-### Obecna gałąź: `feature/user-inventory`
+Branch `feature/archemarket-csv` (not pushed). It implements `superpowers/plans/2026-10-21-archemarket-csv.md`, and its rulings are recorded in the plan's ledger.
 
-Gałąź jest **kompletna** — 17 commitów ponad main. Zawiera:
-- Backend `user_inventory/` — model, schemas, services, router, 3 endpointy
-- Migracje alembic — 2 nowe (unique constraint + user_inventory)
-- Testy — 261 linii `test_inventory.py`, TDD
-- Frontend — strona `/inventory` (177 linii), integracja API w RecipeTree
-- TypeScript migration — `api.d.ts` (1617 linii), wszystkie `.js→.ts`, `lang="ts"`
-- Audyt — naprawione findingi z code review (atomic upsert, AppError handling itp.)
+- **Removed:** Discord bot, `pricetracker*` addons, ingest, prices, watchlist, profiles, registration and password-reset routes, the old item pages and price chart.
+- **Frozen:** crafting and inventory (`backend/frozen`, `frontend/frozen`).
+- **New:**
+  - the `market` module (items, market days, listings, CSV import, read API);
+  - `/market` and `/import` pages;
+  - `create-superuser` CLI;
+  - Playwright suite in `frontend/e2e/`;
+  - CI for vitest, e2e and infra.
+- **Layout:** `app/core`, `app/admin`, `app/auth`, `app/market`, with tests mirroring them. `lib/core` and `lib/market` on the frontend.
+- **Frontend deps:** reverted from the broken dependabot SvelteKit 3 bump to SvelteKit 2.70.3, then patched with npm audit fixes; ECharts is 6.1.
 
-**Status: gotowy do merge do main. Nie jest jeszcze zpushowany.**
-
-### Co zrobiono w tej sesji (2026-05-20)
-
-- Przeniesiono `docs/architecture.md` → `docs/ai/architecture.md`
-- Zaktualizowano architecture.md (usunięto watcher, poprawiono ścieżkę auth.svelte)
-- Utworzono brakujące pliki: `stack.md`, `patterns.md`, `roadmap.md`, `constitution.md`, `progress.md`
-- Analiza całego projektu przez 4 równoległych agentów (backend, frontend, infra/bot, git)
-
-### Następne kroki
-
-1. Merge `feature/user-inventory` → `main` (po decyzji użytkownika)
-2. Pricetracker Lua addon (osobne repo, nie zaczęte)
-3. Cleanup: `mockData.ts`, `InventoryModal.svelte`, `aiosqlite` dependency
+Next: the user reviews the branch, then the roadmap items (crafting and inventory rebuild first).
