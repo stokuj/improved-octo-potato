@@ -51,7 +51,7 @@
             {/if}
 
             <button type="button" class="btn btn-primary w-full h-12 shadow-md shadow-primary/10 font-bold" onclick={handleGoogle} disabled={isLoading}>
-                Sign in with Google
+                Continue with Google
             </button>
 
             {#if PASSWORD_LOGIN}
