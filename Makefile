@@ -1,9 +1,12 @@
 ROOT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-DEV_COMPOSE  := podman compose -f $(ROOT_DIR)infra/compose/docker-compose.dev.yml
-PROD_COMPOSE := podman compose -f $(ROOT_DIR)infra/compose/docker-compose.prod.yml
+# infra/.env is optional; without it compose falls back to the defaults in the files.
+ENV_FILE := $(ROOT_DIR)infra/.env
+ENV_ARG  := $(if $(wildcard $(ENV_FILE)),--env-file $(ENV_FILE),)
+DEV_COMPOSE  := podman compose $(ENV_ARG) -f $(ROOT_DIR)infra/compose/docker-compose.dev.yml
+PROD_COMPOSE := podman compose $(ENV_ARG) -f $(ROOT_DIR)infra/compose/docker-compose.prod.yml
 
 .PHONY: help \
-        dev-up dev-down dev-status dev-build dev-logs \
+        dev-up dev-down dev-reset dev-status dev-build dev-logs \
         prod-up prod-down prod-status prod-logs prod-build \
         test migrate seed create-superuser \
         e2e-up e2e-down e2e-seed e2e-migrate e2e-test e2e-logs
@@ -12,6 +15,7 @@ help:
 	@echo "Development"
 	@echo "  make dev-up       Start db + backend + frontend (all in Docker)"
 	@echo "  make dev-down     Stop dev containers"
+	@echo "  make dev-reset    Drop dev volumes (DB) and start fresh"
 	@echo "  make dev-status   Show dev container status"
 	@echo "  make dev-build    Rebuild dev images"
 	@echo "  make dev-logs     Follow dev logs"
@@ -26,8 +30,15 @@ help:
 	@echo "Backend"
 	@echo "  make test         Run backend test suite"
 	@echo "  make migrate      Run alembic upgrade head inside dev backend"
-	@echo "  make seed         Seed db with sample items and price history"
+	@echo "  make seed         Import the ArcheMarket sample CSVs"
 	@echo "  make create-superuser EMAIL=.. PASSWORD=..  Create the admin or reset its password"
+	@echo ""
+	@echo "E2E"
+	@echo "  make e2e-up       Build and start the e2e stack"
+	@echo "  make e2e-migrate  Run migrations in the e2e backend"
+	@echo "  make e2e-seed     Create the e2e superuser"
+	@echo "  make e2e-test     Run Playwright"
+	@echo "  make e2e-down     Stop the e2e stack and drop its data"
 
 # ── Development ──────────────────────────────────────────────────────────────
 
@@ -41,6 +52,9 @@ dev-up:
 
 dev-down:
 	$(DEV_COMPOSE) down
+
+dev-reset:
+	$(DEV_COMPOSE) down -v && $(DEV_COMPOSE) up -d
 
 dev-status:
 	$(DEV_COMPOSE) ps --format "table {{.Name}}\t{{.Service}}\t{{.Status}}\t{{.Ports}}"
