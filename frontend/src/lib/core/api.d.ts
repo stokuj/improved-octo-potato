@@ -367,12 +367,15 @@ export interface components {
             /** Is Superuser */
             is_superuser: boolean;
         };
-        /** UserUpdate */
+        /**
+         * UserUpdate
+         * @description BaseUserUpdate without ``email``: in prod the email is the Google sign-in
+         *     key, so changing it would lock the owner out. fastapi-users already ignores
+         *     the flags on /users/me (safe update); superusers may set them on /users/{id}.
+         */
         UserUpdate: {
             /** Password */
             password?: string | null;
-            /** Email */
-            email?: string | null;
             /** Is Active */
             is_active?: boolean | null;
             /** Is Superuser */

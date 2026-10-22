@@ -33,7 +33,7 @@ Production signs in with Google only, and only into an account that already exis
    podman compose --env-file infra/.env -f infra/compose/docker-compose.prod.yml \
      exec backend uv run python -m app.auth.cli create-superuser you@gmail.com 'any-long-password'
    ```
-   In prod the password is never used.
+   In prod the password is never used, so pass any throwaway value, not a real password (it stays in the shell history).
 
 In dev the password form is shown because compose sets `PUBLIC_PASSWORD_LOGIN=true`. Running `npm run dev` outside compose needs that variable too. Google works in dev only when the two `GOOGLE_*` variables are set.
 

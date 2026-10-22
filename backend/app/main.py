@@ -4,7 +4,9 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.admin.setup import setup_admin
+from app.auth.oauth import oauth_callback_error_handler
 from app.auth.router import router as auth_router
+from httpx_oauth.integrations.fastapi import OAuth2AuthorizeCallbackError
 from app.core.errors import register_exception_handlers
 from app.core.rate_limit import limiter
 from app.core.settings import settings
@@ -30,6 +32,7 @@ app.add_middleware(
 )
 
 register_exception_handlers(app)
+app.add_exception_handler(OAuth2AuthorizeCallbackError, oauth_callback_error_handler)
 
 # All API routes live under /api — admin stays at /admin (sqladmin)
 api = APIRouter(prefix="/api")

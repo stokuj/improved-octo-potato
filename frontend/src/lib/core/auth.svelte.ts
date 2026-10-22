@@ -92,7 +92,8 @@ export async function login(
 const GOOGLE_ERRORS: Record<string, string> = {
     LOGIN_BAD_CREDENTIALS: 'This Google account has no access.',
     OAUTH_NOT_AVAILABLE_EMAIL: 'Google did not return a verified email.',
-    access_denied: 'Sign-in was cancelled.'
+    access_denied: 'Sign-in was cancelled.',
+    GOOGLE_PROFILE_UNAVAILABLE: 'Could not read your Google profile. Check that the People API is enabled.'
 };
 const GOOGLE_FAILED = 'Google sign-in failed. Try again.';
 

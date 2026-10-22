@@ -86,3 +86,14 @@ async def test_delete_user_as_superuser(
 
     r2 = await superuser_client.get(f"/api/users/{regular_user_id}")
     assert r2.status_code == 404
+
+
+async def test_own_email_cannot_change(client, make_user, login) -> None:
+    # Prod signs in by Google email; changing it would lock the owner out.
+    user, pwd = await make_user()
+    await login(client, user.email, pwd)
+    r = await client.patch(
+        "/api/users/me", json={"email": f"other-{user.id.hex[:8]}@example.com"}
+    )
+    assert r.status_code == 422
+    assert (await client.get("/api/users/me")).json()["email"] == user.email

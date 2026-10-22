@@ -9,7 +9,7 @@ from app.core.db import async_session_maker
 from app.core.settings import settings
 
 
-def _to_sign_in() -> RedirectResponse:
+def sign_in_redirect() -> RedirectResponse:
     return RedirectResponse(f"{settings.frontend_url}/auth", status_code=302)
 
 
@@ -20,14 +20,22 @@ class AdminAuth(AuthenticationBackend):
 
     async def logout(self, request: Request) -> Response:
         request.session.clear()
-        response = _to_sign_in()
-        response.delete_cookie(cookie_transport.cookie_name)
+        response = sign_in_redirect()
+        # Same attributes fastapi-users sets the cookie with, so browsers drop that one.
+        response.delete_cookie(
+            cookie_transport.cookie_name,
+            path=cookie_transport.cookie_path,
+            domain=cookie_transport.cookie_domain,
+            secure=cookie_transport.cookie_secure,
+            httponly=cookie_transport.cookie_httponly,
+            samesite=cookie_transport.cookie_samesite,
+        )
         return response
 
     async def authenticate(self, request: Request) -> Response | bool:
         token = request.cookies.get(cookie_transport.cookie_name)
         if not token:
-            return _to_sign_in()
+            return sign_in_redirect()
 
         async with async_session_maker() as session:
             async for user_db in get_user_db(session):
@@ -35,7 +43,7 @@ class AdminAuth(AuthenticationBackend):
                     user = await get_jwt_strategy().read_token(token, user_manager)
                     if user and user.is_superuser and user.is_active:
                         return True
-        return _to_sign_in()
+        return sign_in_redirect()
 
 
 # Wrap login and authenticate to enforce secure session cookie if needed

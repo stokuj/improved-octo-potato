@@ -76,6 +76,7 @@ describe('Google sign-in', () => {
         ['LOGIN_BAD_CREDENTIALS', 'This Google account has no access.'],
         ['OAUTH_NOT_AVAILABLE_EMAIL', 'Google did not return a verified email.'],
         ['access_denied', 'Sign-in was cancelled.'],
+        ['GOOGLE_PROFILE_UNAVAILABLE', 'Could not read your Google profile. Check that the People API is enabled.'],
         ['OAUTH_INVALID_STATE', 'Google sign-in failed. Try again.']
     ])('finishGoogleLogin maps 400 %s to a message', async (detail, message) => {
         mockFetch({ '/auth/google/callback*': { status: 400, json: async () => ({ detail }) } });

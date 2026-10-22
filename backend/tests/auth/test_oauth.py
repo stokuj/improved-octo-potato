@@ -3,8 +3,10 @@ from urllib.parse import parse_qs, urlparse
 
 import httpx
 import pytest
+from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 from httpx_oauth.exceptions import GetProfileError
+from httpx_oauth.oauth2 import GetAccessTokenError
 from httpx_oauth.oauth2 import OAuth2Token
 from sqlmodel import select
 
@@ -101,16 +103,22 @@ async def test_google_login_inactive_refused(client, make_user, session, monkeyp
     assert r.json()["detail"] == "LOGIN_BAD_CREDENTIALS"
 
 
-@pytest.mark.parametrize("kwargs", [{"verified": False}, {"profile_error": True}])
+@pytest.mark.parametrize(
+    ("kwargs", "detail"),
+    [
+        ({"verified": False}, "OAUTH_NOT_AVAILABLE_EMAIL"),
+        # A failing People API call (e.g. API disabled) is not an email problem.
+        ({"profile_error": True}, "GOOGLE_PROFILE_UNAVAILABLE"),
+    ],
+)
 async def test_google_without_verified_email_refused(
-    client, make_user, monkeypatch, kwargs
+    client, make_user, monkeypatch, kwargs, detail
 ):
-    # Covers both an unverified primary email and a failing People API call.
     user, _ = await make_user(superuser=True)
     fake_google(monkeypatch, email=user.email, **kwargs)
     r = await google_login(client)
     assert r.status_code == 400
-    assert r.json()["detail"] == "OAUTH_NOT_AVAILABLE_EMAIL"
+    assert r.json()["detail"] == detail
 
 
 async def test_google_callback_without_csrf_cookie_refused(
@@ -155,5 +163,26 @@ async def test_profile_error_logs_google_reason(monkeypatch, caplog):
         )
 
     monkeypatch.setattr(client, "get_profile", get_profile)
-    assert await client.get_id_email("t") == ("", None)
+    with pytest.raises(HTTPException) as exc:
+        await client.get_id_email("t")
+    assert exc.value.detail == "GOOGLE_PROFILE_UNAVAILABLE"
     assert "People API has not been used" in caplog.text
+
+
+async def test_failed_code_exchange_hides_google_text(client, monkeypatch, caplog):
+    async def get_access_token(code, redirect_uri, code_verifier=None):
+        raise GetAccessTokenError("invalid_grant: Bad Request (secret-ish detail)")
+
+    monkeypatch.setattr(google_client, "get_access_token", get_access_token)
+    state = await authorize_state(client)
+    r = await client.get(f"/api/auth/google/callback?code=reused&state={state}")
+    assert r.status_code == 400
+    assert r.json() == {"detail": "OAUTH_CODE_EXCHANGE_FAILED"}
+    assert "invalid_grant" in caplog.text
+
+
+async def test_cancelled_consent_keeps_access_denied(client):
+    state = await authorize_state(client)
+    r = await client.get(f"/api/auth/google/callback?error=access_denied&state={state}")
+    assert r.status_code == 400
+    assert r.json() == {"detail": "access_denied"}
