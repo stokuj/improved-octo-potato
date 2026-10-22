@@ -28,7 +28,12 @@ Production signs in with Google only, and only into an account that already exis
 3. Add the authorized redirect URIs `https://<your-domain>/auth/callback` and `http://localhost:5173/auth/callback`.
 4. On the OAuth consent screen keep the publishing status **Testing** and add your Gmail as the only test user. Google then refuses every other account before it reaches the app.
 5. Put the client ID and secret in the prod env as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The prod stack does not start without them.
-6. Create the account with the **primary email of that Google account**: `make create-superuser EMAIL=you@gmail.com PASSWORD='any-long-password'`. In prod the password is never used.
+6. Create the account with the **primary email of that Google account**, on the prod stack (`make create-superuser` targets the dev stack):
+   ```bash
+   podman compose --env-file infra/.env -f infra/compose/docker-compose.prod.yml \
+     exec backend uv run python -m app.auth.cli create-superuser you@gmail.com 'any-long-password'
+   ```
+   In prod the password is never used.
 
 In dev the password form is shown because compose sets `PUBLIC_PASSWORD_LOGIN=true`. Running `npm run dev` outside compose needs that variable too. Google works in dev only when the two `GOOGLE_*` variables are set.
 

@@ -125,3 +125,35 @@ async def test_google_callback_without_csrf_cookie_refused(
         r = await fresh.get(f"/api/auth/google/callback?code=x&state={state}")
     assert r.status_code == 400
     assert r.json()["detail"] == "OAUTH_INVALID_STATE"
+
+
+async def test_email_without_metadata_is_not_verified(monkeypatch):
+    from app.auth.oauth import VerifiedGoogleOAuth2
+
+    client = VerifiedGoogleOAuth2("id", "secret")
+
+    async def get_profile(token):
+        return {
+            "resourceName": "people/1",
+            "emailAddresses": [{"value": "x@example.com"}],
+        }
+
+    monkeypatch.setattr(client, "get_profile", get_profile)
+    assert await client.get_id_email("t") == ("people/1", None)
+
+
+async def test_profile_error_logs_google_reason(monkeypatch, caplog):
+    from app.auth.oauth import VerifiedGoogleOAuth2
+
+    client = VerifiedGoogleOAuth2("id", "secret")
+
+    async def get_profile(token):
+        raise GetProfileError(
+            response=httpx.Response(
+                403, text="People API has not been used in project 1"
+            )
+        )
+
+    monkeypatch.setattr(client, "get_profile", get_profile)
+    assert await client.get_id_email("t") == ("", None)
+    assert "People API has not been used" in caplog.text

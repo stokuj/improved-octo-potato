@@ -38,3 +38,19 @@ async def test_admin_garbage_cookie_redirects() -> None:
         r = await c.get("/admin/", follow_redirects=False)
     assert r.status_code in (302, 303)
     assert r.headers["location"] == FRONTEND_AUTH
+
+
+async def test_admin_password_form_is_not_a_way_in(make_user) -> None:
+    user, pwd = await make_user(superuser=True)
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as c:
+        r = await c.post(
+            "/admin/login",
+            data={"username": user.email, "password": pwd},
+            follow_redirects=False,
+        )
+        assert r.status_code == 400
+        r = await c.get("/admin/", follow_redirects=False)
+    assert r.status_code in (302, 303)
+    assert r.headers["location"] == FRONTEND_AUTH

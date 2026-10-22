@@ -16,18 +16,20 @@ class VerifiedGoogleOAuth2(GoogleOAuth2):
         try:
             profile = await self.get_profile(token)
         except GetProfileError as e:
+            # Body says why, e.g. "People API has not been used in project …".
+            body = e.response.text[:300] if e.response is not None else ""
             status = e.response.status_code if e.response is not None else None
-            log.warning("Google profile request failed (status %s)", status)
+            log.warning("Google profile request failed (status %s): %s", status, body)
             return "", None
         primary = next(
             (
                 e
                 for e in profile.get("emailAddresses", [])
-                if e["metadata"].get("primary")
+                if e.get("metadata", {}).get("primary")
             ),
             None,
         )
-        if primary is None or not primary["metadata"].get("verified"):
+        if primary is None or not primary.get("metadata", {}).get("verified"):
             return profile.get("resourceName", ""), None
         return profile["resourceName"], primary["value"]
 

@@ -1,7 +1,7 @@
 # App settings from env/.env, with prod secret checks.
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(
         default=["http://localhost:5173", "http://127.0.0.1:5173"]
     )
+
+    @field_validator("frontend_url")
+    @classmethod
+    def _strip_trailing_slash(cls, value: str) -> str:
+        # Used as f"{frontend_url}/auth/callback"; Google rejects "//auth".
+        return value.rstrip("/")
 
     @model_validator(mode="after")
     def _check_secrets(self) -> "Settings":

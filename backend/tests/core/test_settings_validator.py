@@ -85,3 +85,13 @@ def test_prod_accepts_google_settings(clean_env):
         **_PROD_SECRETS,
     )
     assert s.frontend_url == "http://localhost:5173"
+
+
+def test_frontend_url_trailing_slash_is_dropped(clean_env):
+    # The Google redirect_uri is f"{frontend_url}/auth/callback"; "//auth" would not match.
+    from app.core.settings import Settings
+
+    assert (
+        Settings(frontend_url="https://example.com/").frontend_url
+        == "https://example.com"
+    )
