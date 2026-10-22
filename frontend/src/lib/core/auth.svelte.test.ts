@@ -1,5 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { createUserState } from './auth.svelte';
+import { describe, it, expect, afterEach } from 'vitest';
+import { createUserState, finishGoogleLogin, getGoogleAuthorizeUrl } from './auth.svelte';
+import { mockFetch, restoreFetch } from '../../test/mocks/fetch';
+import { page } from '../../test/mocks/app-state.svelte';
 
 describe('auth state isolation', () => {
     it('each createUserState() call returns an independent store', () => {
@@ -41,11 +43,6 @@ describe('auth state edge cases', () => {
     });
 });
 
-import { afterEach } from 'vitest';
-import { finishGoogleLogin, getGoogleAuthorizeUrl } from './auth.svelte';
-import { mockFetch, restoreFetch } from '../../test/mocks/fetch';
-import { page } from '../../test/mocks/app-state.svelte';
-
 describe('Google sign-in', () => {
     afterEach(() => restoreFetch());
 
@@ -78,6 +75,7 @@ describe('Google sign-in', () => {
     it.each([
         ['LOGIN_BAD_CREDENTIALS', 'This Google account has no access.'],
         ['OAUTH_NOT_AVAILABLE_EMAIL', 'Google did not return a verified email.'],
+        ['access_denied', 'Sign-in was cancelled.'],
         ['OAUTH_INVALID_STATE', 'Google sign-in failed. Try again.']
     ])('finishGoogleLogin maps 400 %s to a message', async (detail, message) => {
         mockFetch({ '/auth/google/callback*': { status: 400, json: async () => ({ detail }) } });

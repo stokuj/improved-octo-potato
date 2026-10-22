@@ -34,6 +34,9 @@
     }
 </script>
 
+<!-- Back from Google restores this page from the bfcache with isLoading still true. -->
+<svelte:window onpageshow={() => (isLoading = false)} />
+
 <div class="flex justify-center items-center py-12 min-h-[70vh] bg-base-200/30 rounded-box">
     <div class="card bg-base-100 w-full max-w-[440px] shadow-xl border border-base-200">
         <div class="card-body p-10">
