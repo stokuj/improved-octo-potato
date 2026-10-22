@@ -88,7 +88,9 @@ How `/summary` is computed. "Today" is the item's newest day:
   3. That page calls `GET /api/auth/google/callback` with the query; the backend checks state + CSRF, exchanges the code and reads the **verified primary** email (`VerifiedGoogleOAuth2`).
   4. `UserManager.oauth_callback` signs in only an existing active superuser with that email (case-insensitive). It never creates users and stores no OAuth accounts or tokens.
 - The Google router is mounted only when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set; prod refuses to start without them.
-- `/admin` reads the same cookie; anyone else is redirected to `{FRONTEND_URL}/auth`.
+- `/admin` reads the same cookie; anyone else is redirected to `{FRONTEND_URL}/auth`. `/admin/login` redirects there too, so sqladmin's password form never shows.
+- Google errors reach the frontend as fixed codes: `LOGIN_BAD_CREDENTIALS`, `OAUTH_NOT_AVAILABLE_EMAIL` (unverified email), `GOOGLE_PROFILE_UNAVAILABLE` (People API call failed), `OAUTH_CODE_EXCHANGE_FAILED` (reused code or bad client secret; Google's text goes only to the log), `access_denied` (consent cancelled).
+- The API cannot change a user's email (`UserUpdate` has no `email`): in prod it is the Google sign-in key.
 - `UserRead` exposes `is_superuser` so the frontend can show `/import`.
 
 ## Frontend (`frontend/src/`)
