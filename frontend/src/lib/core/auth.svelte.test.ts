@@ -101,4 +101,14 @@ describe('Google sign-in', () => {
             message: 'Google sign-in failed. Try again.'
         });
     });
+
+    it('finishGoogleLogin survives a network failure', async () => {
+        globalThis.fetch = (async () => {
+            throw new TypeError('Failed to fetch');
+        }) as typeof fetch;
+        await expect(finishGoogleLogin(createUserState(), '?code=c&state=s')).resolves.toEqual({
+            success: false,
+            message: 'Google sign-in failed. Try again.'
+        });
+    });
 });

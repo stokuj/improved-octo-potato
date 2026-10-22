@@ -113,9 +113,15 @@ export async function finishGoogleLogin(
     user: UserState,
     search: string
 ): Promise<{ success: boolean; message?: string }> {
-    const response = await fetch(`${API_URL}/auth/google/callback${search}`, {
-        credentials: 'include'
-    });
+    let response: Response;
+    try {
+        response = await fetch(`${API_URL}/auth/google/callback${search}`, {
+            credentials: 'include'
+        });
+    } catch {
+        // Network or CORS failure: the callback page must still show an error, not spin.
+        return { success: false, message: GOOGLE_FAILED };
+    }
 
     if (response.ok) {
         await checkMe(user);
