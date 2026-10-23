@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 # Musi być PRZED importami z app — pydantic-settings czyta env przy imporcie
 # TEST_PG_HOSTPORT lets a local run point at a non-default test server.
@@ -12,6 +13,7 @@ os.environ["DATABASE_URL"] = (
 os.environ["AUTH_SECRET"] = "test-secret-must-be-at-least-32-characters-here"
 os.environ["ADMIN_SESSION_SECRET"] = "test-admin-secret-must-be-32-chars-here"
 os.environ["GOOGLE_CLIENT_ID"] = "test-google-client-id"
+os.environ["ICON_CACHE_DIR"] = tempfile.mkdtemp(prefix="icon-cache-")
 os.environ["GOOGLE_CLIENT_SECRET"] = "test-google-client-secret"
 
 import uuid

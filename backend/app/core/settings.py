@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     # Where Google sends the browser back (/auth/callback) and /admin sends anonymous users.
     frontend_url: str = "http://localhost:5173"
 
+    # Item icons fetched from ArcheAge Codex; a volume in compose, never committed.
+    icon_cache_dir: str = "/app/icon-cache"
+
     cookie_secure: bool = False
     sql_echo: bool = False
     # Env format: JSON array string, e.g., '["http://localhost:3000"]'

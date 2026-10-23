@@ -40,6 +40,7 @@ services:
       - ../../backend/seed.py:/app/seed.py:z
       # seed.py reads the sample CSVs from tests/market/fixtures
       - ../../backend/tests:/app/tests:ro,z
+      - icon_cache:/app/icon-cache
     ports:
       - "8000:8000"
     depends_on:
@@ -66,4 +67,5 @@ services:
 
 volumes:
   postgres_dev_data:
+  icon_cache:
   frontend_node_modules:

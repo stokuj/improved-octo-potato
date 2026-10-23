@@ -209,3 +209,9 @@ __marimo__/
 /vue-project
 backend/app.db
 addon/archerage.log
+
+# Item icons cached from ArcheAge Codex (game art, never committed)
+icon-cache/
+
+# Superpowers brainstorm mockups and plan workspaces
+.superpowers/
