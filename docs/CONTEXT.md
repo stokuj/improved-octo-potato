@@ -36,6 +36,13 @@ A listing too small to say anything about the market price, usually bait.
 **Cheapest real offer**:
 The cheapest listing that is not a tiny stack.
 
+**Item base**:
+Every item the app knows, with its name, category and NPC price. It grows from uploads.
+_Avoid_: item database, catalogue
+
+**Verified item**:
+An item the admin has confirmed, by uploading it or by checking it by hand. An item first seen in a player's upload is unverified until then.
+
 **Copper**:
 The unit of money: 1 gold = 100 silver = 10 000 copper.
 
@@ -74,6 +81,17 @@ The contents of one place at the moment it was saved in game.
 
 **Slot**:
 One square of a place's grid.
+
+## Uploads
+
+**Uploader**:
+The user whose upload stored a row. It is recorded for every market row and never shown to users.
+
+**Import run**:
+The record of one uploaded file: who, when, what kind, the counts and its issues. An admin's hand edit of an item is a run too.
+
+**Issue**:
+One problem or change found in an import run: a bad row, a new item, a changed or verified item, or a mismatch.
 
 ## Sources
 
