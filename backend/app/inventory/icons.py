@@ -39,7 +39,8 @@ class FetchBudgetExceeded(Exception):
 def icon_path(html: str) -> str | None:
     """The icon path on a Codex item page, e.g. `items/icon_item_0352.png`."""
     cell = _ICON_CELL.search(html)
-    src = cell and _ICON_SRC.fullmatch(cell.group(1))
+    # Some paths keep the game's Windows separator (`costume_bo\nu_f_...`); Codex serves them with `/`.
+    src = cell and _ICON_SRC.fullmatch(cell.group(1).replace("\\", "/"))
     return src.group(1) if src else None
 
 
@@ -61,6 +62,9 @@ async def fetch_codex(item_type: int) -> bytes | None:
             path = icon_path(page.text)
             if path is None:
                 if "<title>ERROR!" in page.text:  # Codex's page for an unknown id
+                    return b""
+                if _ICON_CELL.search(page.text):
+                    log.warning("Codex icon path for %s is unusable", item_type)
                     return b""
                 log.warning("Codex page for %s has no icon box", item_type)
                 return None

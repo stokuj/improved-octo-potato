@@ -107,6 +107,7 @@ describe('items page', () => {
 		await fireEvent.error(img);
 		await waitFor(() => expect(tile.querySelector('img')).toBeNull());
 		expect((tile as HTMLElement).style.background).not.toBe('');
+		expect(tile.getAttribute('style')).toContain('border-image');
 	});
 
 	it('draws empty slots dashed and keeps the tooltip wrapper', async () => {

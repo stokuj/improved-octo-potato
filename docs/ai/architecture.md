@@ -105,8 +105,8 @@ The caller's `id` and `is_superuser` are read once, before the loop. A file that
 - **Change flags.** `change` compares totals per `(item_type, item_grade)` against the place's previous snapshot: `new`, `up`, `down`, or null when there is no change or no previous snapshot. A moved stack is no change, and items that left the bag are not shown.
 - **Ownership.** Every query is scoped to the signed-in user; others' data never appears.
 - **Icons.**
-  - The game gives no icon path for bag items, so icons are looked up by `item_type`. A cache miss fetches the Codex item page `https://archeagecodex.com/us/item/{item_type}/`, takes the first image in its `item-icon` cell (`items/…png`, sometimes in a subfolder), then fetches that PNG (5 s timeout) into `ICON_CACHE_DIR/{item_type}.png`.
-  - Codex answers an unknown id with a 200 `ERROR!` page, and an unknown PNG with a generic image recognised by its SHA-256. Both are remembered as `{item_type}.missing`, so the tile shows its grade colour.
+  - The game gives no icon path for bag items, so icons are looked up by `item_type`. A cache miss fetches the Codex item page `https://archeagecodex.com/us/item/{item_type}/`, takes the first image in its `item-icon` cell (`items/…png`, sometimes in a subfolder; a Windows `\` separator in the path is read as `/`), then fetches that PNG (5 s timeout) into `ICON_CACHE_DIR/{item_type}.png`.
+  - Codex answers an unknown id with a 200 `ERROR!` page, and an unknown PNG with a generic image recognised by its SHA-256. Both are remembered as `{item_type}.missing`, and so is an icon cell whose path is not a Codex `items/…png`; the tile shows its grade colour.
   - A page without the icon cell (Codex changed its HTML), a non-200 or a network error is not cached and is retried on the next request.
   - Codex drops about 1 in 7 TCP connects, so each fetch retries connects twice (2 s connect timeout), and at most 4 fetches run in parallel.
   - ArcheRage's own items (ids 8 000 000 and up) are not on Codex, so they stay grade colours.
@@ -149,13 +149,14 @@ How `/summary` is computed. "Today" is the item's newest day:
 |---|---|
 | `lib/core/` | API base URL, auth state (Svelte 5 runes + context), `formatCurrency`, generated `api.d.ts` + `types.ts` |
 | `lib/market/` | API helpers, `chart.ts` (pure ECharts option builder), `MarketChart`, `ListingsTable`, `SummaryTable`, `ImportDropzone` |
-| `lib/inventory/` | API helpers, `grid.ts` (slot position, tile label, change dot, `pickTab`, `chestLabel`, `chestOwner`, `snapshotTime`), `grades.ts` (grade names and pastel placeholder colours), `GridPanel`, `InventoryGrid`, `InventoryTile` |
+| `lib/inventory/` | API helpers, `grid.ts` (slot position, tile label, change dot, `pickTab`, `chestLabel`, `chestOwner`, `snapshotTime`), `grades.ts` (grade names, pastel placeholder colours and in-game frame colours), `GridPanel`, `InventoryGrid`, `InventoryTile` |
 | `routes/` | `/` → `/market`, `/market`, `/items` (characters left, each with the chests in their bag; house chests right; `?character=` and `?chest=`, `All` by default), `/inventory` → `/items`, `/import` (signed in), `/auth` (Google button; password form when `PUBLIC_PASSWORD_LOGIN=true`), `/auth/callback`, `/about` |
 
 - The chart is one ECharts instance with two stacked panels sharing the date axis: daily and 7-day average lines on top, volume bars below. It uses the SVG renderer.
 - CSP `connect-src` and `img-src` allow the origin of `PUBLIC_API_URL`, set in `svelte.config.js`. Icons are served by the API.
 - **Every grid** (bag, warehouse, chest) is 10 columns, with slot 1 top-left, inside a `GridPanel` that shows `filled / slots` and its own snapshot times.
   - A tile shows the Codex icon over its grade's pastel colour, which is all that shows when the icon is missing or fails to load.
+  - A filled tile is square with a 2px frame in its grade's in-game colour (sampled from Codex `images/icon_grade{n}.png`; grade 0 uses Basic's white). Grades 8 and up have ornate frames in game, drawn here as a light-dark-light gradient.
   - Empty slots have a dashed outline.
   - The count sits bottom-right, and a change dot top-left.
   - The tooltip and the `aria-label` carry the name, grade, count and delta.

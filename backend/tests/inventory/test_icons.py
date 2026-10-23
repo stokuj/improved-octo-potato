@@ -138,6 +138,14 @@ def test_icon_path_in_a_subfolder() -> None:
     assert icons.icon_path(page) == "items/quest/icon_item_quest169.png"
 
 
+def test_icon_path_with_a_windows_separator() -> None:
+    # Codex keeps the game's `\` in some paths (item 47047 on 2026-10-23); `/` serves the icon.
+    page = LEATHER_PAGE.replace(
+        "items/icon_item_0352", "items/costume_bo\\nu_f_bo_leather295"
+    )
+    assert icons.icon_path(page) == "items/costume_bo/nu_f_bo_leather295.png"
+
+
 @pytest.mark.parametrize(
     "src",
     ["//archeagecodex.com/items/../x.png", "//evil.example.com/items/a.png", ""],
@@ -192,6 +200,15 @@ async def test_fetch_codex_changed_layout_is_not_cached(monkeypatch) -> None:
     url = "https://archeagecodex.com/us/item/16327/"
     fake_web(monkeypatch, {url: httpx.Response(200, text="<title>Leather</title>")})
     assert await icons.fetch_codex(16327) is None
+
+
+async def test_fetch_codex_unusable_icon_path_is_missing(monkeypatch) -> None:
+    # The icon box is there but its path is not one we fetch: no icon, don't ask again.
+    url = "https://archeagecodex.com/us/item/16327/"
+    page = LEATHER_PAGE.replace("//archeagecodex.com/items/icon_item_0352.png", "")
+    seen = fake_web(monkeypatch, {url: httpx.Response(200, text=page)})
+    assert await icons.fetch_codex(16327) == b""
+    assert seen == [url]
 
 
 async def test_fetch_codex_server_error_is_not_cached(monkeypatch) -> None:
