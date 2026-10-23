@@ -7,6 +7,7 @@
 | ArcheMarket CSV rebuild (2026-10-21) | Manual upload of `listings.csv` and `market.csv`, idempotent import, `/market` with a 14-day chart, offers and a today-vs-7-days table. Bot, addons, ingest, prices, watchlist and profiles removed. Spec: `superpowers/specs/2026-10-21-archemarket-csv-design.md` |
 | Auth | Single admin account from the `create-superuser` CLI, cookie JWT (7 days) |
 | Inventory: bag view (2026-10-23) | ArcheBag `inventory.csv` on `/import`; newest and previous snapshot per user and character; `/inventory` tile grid with Codex icons. Spec: `superpowers/specs/2026-10-23-inventory-design.md` |
+| Items: warehouse and house chests (2026-10-23) | ArcheBag 7d `inventory.csv` (bag + warehouse) and `chests.csv`; keep-two per place; `/items` with characters left and chests right, each with `All`. Spec: `superpowers/specs/2026-10-23-items-design.md` |
 | Google-only login (2026-10-21) | Prod signs in with Google only; existing superusers matched by verified email; `/admin` on the same cookie. Spec: `superpowers/specs/2026-10-21-google-login-design.md` |
 | Admin panel | sqladmin at `/admin`, read-only market views |
 | Infra | Podman compose dev/prod/e2e, Caddy, Makefile, CI (ruff, pytest, alembic check, svelte-check, vitest, docker builds, infra checks, non-blocking e2e) |
@@ -15,7 +16,6 @@
 
 | Feature | Priority | Notes |
 |---|---|---|
-| Warehouse and house chests | high | Next storage after the bag. Warehouse is per character (`X2Bank`), house chests per account (`X2Coffer`); both readable only while open in game. Needs ArcheBag work first |
 | Player registration | medium | Google sign-in creating non-admin accounts. Inventory data is already per user |
 | Rebuild crafting on the new item/price model | high | Reference code: `backend/frozen`, `frontend/frozen`. Buy price = cheapest listing `unit_price`, sell price = `daily_avg`. Bag prices come from ArcheMarket step 7c |
 | Graded items | medium | ArcheMarket must first write `item_type`/`item_grade` in `listings.csv`. Then key items on `(item_type, item_grade)` only, and drop `UNIQUE(name)` |

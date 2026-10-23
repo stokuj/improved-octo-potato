@@ -5,7 +5,7 @@ from app.auth.dependencies import current_active_user
 from app.auth.models import User
 from app.core.db import get_async_session
 from app.inventory import icons, services
-from app.inventory.schemas import BagRead, CharacterRead
+from app.inventory.schemas import CharacterRead, ChestRead
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
@@ -18,13 +18,12 @@ async def read_characters(
     return await services.list_characters(session, user.id)
 
 
-@router.get("/characters/{character}", response_model=BagRead)
-async def read_bag(
-    character: str,
+@router.get("/chests", response_model=list[ChestRead])
+async def read_chests(
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
-) -> BagRead:
-    return await services.get_bag(session, user.id, character)
+) -> list[ChestRead]:
+    return await services.list_chests(session, user.id)
 
 
 @router.get("/icons/{item_type}.png", response_class=Response)

@@ -26,6 +26,7 @@ describe('import page', () => {
 		render(Page);
 		expect(document.querySelector('[data-testid="dropzone"]')).not.toBeNull();
 		expect(document.body.textContent).toContain('inventory.csv');
+		expect(document.body.textContent).toContain('chests.csv');
 		expect(document.body.textContent).toContain('admin only');
 	});
 

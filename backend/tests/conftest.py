@@ -28,7 +28,7 @@ from sqlmodel import SQLModel
 # Import modeli — rejestruje metadata w SQLModel
 from app.market.models import Item, Listing, MarketDay  # noqa: F401
 from app.auth.models import User  # noqa: F401
-from app.inventory.models import InventorySlot, InventorySnapshot  # noqa: F401
+from app.inventory.models import ChestName, InventorySlot, InventorySnapshot  # noqa: F401
 from app.core.db import async_session_maker
 from app.core.rate_limit import limiter
 from app.main import app

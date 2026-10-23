@@ -2,9 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-ArcheRage Market Tracker. The user exports AH data with the ArcheMarket game addon (a separate repo) as `listings.csv` and `market.csv`, and their bag with the ArcheBag addon as `inventory.csv`, and uploads them by hand on `/import`. The app stores them idempotently and shows:
+ArcheRage Market Tracker. The user exports AH data with the ArcheMarket game addon (a separate repo) as `listings.csv` and `market.csv`, and their bag and warehouse (`inventory.csv`) and house chests (`chests.csv`) with the ArcheBag addon, and uploads them by hand on `/import`. The app stores them idempotently and shows:
 - `/market`: a 14-day chart, the cheapest current offers, and a today-vs-7-days table;
-- `/inventory`: each character's bag as a game-like tile grid.
+- `/items`: each character's bag, warehouse and bag chests, and the house chests, as game-like tile grids.
 
 Stack: FastAPI + SQLModel + PostgreSQL 16, SvelteKit 2 (Svelte 5 runes) + DaisyUI + ECharts, podman compose.
 
@@ -52,8 +52,8 @@ CI (`.github/workflows`):
 - Shared plumbing is in `core/`: settings with prod secret checks, DB, errors, the **single** slowapi `limiter`, and `utcnow`.
 - `auth/` holds `User` and fastapi-users with a 7-day cookie JWT. Prod signs in with Google only (existing active superusers, matched by verified email); the password route exists only outside prod. There are no register or reset routes: accounts come only from the CLI. `/admin` reuses the same cookie.
 - `market/` holds `Item`, `MarketDay` and `Listing`, plus the market import and read API under `/api/market`.
-- `imports/` owns `POST /api/import`. It routes each file by its header: market files are superuser only, and `inventory.csv` is open to any active user.
-- `inventory/` holds per-user bag snapshots. It keeps the two newest per character and exposes the read API and a public Codex icon cache (looked up by `item_type`) under `/api/inventory`.
+- `imports/` owns `POST /api/import`. It routes each file by its header: market files are superuser only, and `inventory.csv` and `chests.csv` are open to any active user.
+- `inventory/` holds per-user snapshots of places: a character's bag or warehouse, or a chest number. It keeps the two newest per place, keeps each chest's last non-empty name, and exposes the read API and a public Codex icon cache (looked up by `item_type`) under `/api/inventory`.
 - `admin/` is sqladmin at `/admin`.
 - Every API route is under `/api`. Modules use each other's services, never each other's models.
 
@@ -74,9 +74,9 @@ These invariants must hold:
 **Frontend (`frontend/src/`).**
 - `lib/core/` holds config, auth state (runes + Svelte context), `formatCurrency`, and the generated `api.d.ts` re-exported through `types.ts`.
 - `lib/market/` holds the API helpers, `chart.ts` (a pure ECharts option builder: two stacked panels sharing the date axis, no dual-axis), and the components.
-- Routes: `/` → `/market`, `/market` (selected item in `?item=`), `/inventory` (character in `?character=`), `/import` (signed in), `/auth` (Google, plus the password form when `PUBLIC_PASSWORD_LOGIN=true`), `/auth/callback`.
+- Routes: `/` → `/market`, `/market` (selected item in `?item=`), `/items` (`?character=` and `?chest=`, `All` when missing; `/inventory` redirects here), `/import` (signed in), `/auth` (Google, plus the password form when `PUBLIC_PASSWORD_LOGIN=true`), `/auth/callback`.
 - CSP `connect-src` and `img-src` allow the origin of `PUBLIC_API_URL` (`svelte.config.js`), because dev and e2e call the API cross-origin and icons come from the API.
-- `lib/inventory/` holds the inventory API helpers, `grid.ts`, `grades.ts` and the tile/grid components.
+- `lib/inventory/` holds the inventory API helpers, `grid.ts` (tiles, tabs, chest labels, `chestOwner`), `grades.ts` and the tile, grid and `GridPanel` components.
 
 **Frozen code.** `backend/frozen/` and `frontend/frozen/` (crafting, inventory, the old e2e spec) are reference-only, waiting for a rebuild. They are excluded from ruff, pytest, svelte-check, vitest and Docker. Don't import from them or fix them.
 
@@ -85,7 +85,7 @@ These invariants must hold:
 - Tests hit a real Postgres that is **not cleaned between tests**: use unique names and `item_type` values (see `rewrite_fixture` in `tests/market/test_import.py`). Create users with the `make_user` + `login` fixtures, and use `superuser_client` for admin calls. Test emails must use a real TLD like `@example.com`; `EmailStr` rejects `.local`.
 - e2e and local dev use the password form (`PUBLIC_PASSWORD_LOGIN=true`, read from `$env/dynamic/public`); no test talks to Google. Backend OAuth tests fake `google_client.get_access_token`/`get_profile`.
 - Login is rate-limited to 5/min per IP. Playwright logs in once (`e2e/auth.setup.ts` → storage state), and the rate-limit spec runs last in its own project. A quick local rerun can hit the limit.
-- Inventory tests use `backend/tests/inventory/fixtures/inventory.csv`. It is anonymised (`Alpha`, `Bravo`); never commit real character names. Tests never call Codex: fake `icons.fetch_codex`, or route its HTTP through `fake_web` (an `httpx.MockTransport`) in `test_icons.py`. `ICON_CACHE_DIR` points to a temp dir.
+- Inventory tests use `backend/tests/inventory/fixtures/inventory.csv` and `chests.csv`. They are anonymised (`Alpha`, `Bravo`); never commit real character names (the ArcheMarket raw files contain one). Tests never call Codex: fake `icons.fetch_codex`, or route its HTTP through `fake_web` (an `httpx.MockTransport`) in `test_icons.py`. `ICON_CACHE_DIR` points to a temp dir.
 - Naive UTC datetimes in the DB. Money is integer copper (`bigint`), and `item_grade` is the raw game int.
 - Frontend stays on SvelteKit 2: SvelteKit 3 removes `$lib` and `svelte.config.js` (a roadmap item). Don't accept dependabot majors for kit, adapter-node or vitest without that migration.
 - Schema change: write an Alembic migration (`alembic/script.py.mako` already imports `sqlmodel`); `alembic check` must pass.

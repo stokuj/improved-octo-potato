@@ -16,7 +16,7 @@
 		<p class="opacity-70">Sign in to import files.</p>
 	{:else}
 		<p class="text-sm opacity-70">
-			Drop <code>inventory.csv</code> (ArcheBag), plus <code>market.csv</code> and
+			Drop <code>inventory.csv</code> and <code>chests.csv</code> (ArcheBag), plus <code>market.csv</code> and
 			<code>listings.csv</code> (ArcheMarket, admin only).
 		</p>
 		<ImportDropzone onResults={(r) => (results = r)} />

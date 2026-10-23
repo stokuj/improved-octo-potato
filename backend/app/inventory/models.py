@@ -6,18 +6,25 @@ from sqlmodel import Field, SQLModel, UniqueConstraint
 
 
 class InventorySnapshot(SQLModel, table=True):
-    """One ArcheBag click for one character; only the two newest are kept."""
+    """One saved place: a character's bag or warehouse, or a chest; two newest kept."""
 
     __tablename__ = "inventory_snapshot"
     __table_args__ = (
         UniqueConstraint(
-            "user_id", "character", "snapshot_id", name="uq_inventory_snapshot"
+            "user_id",
+            "container",
+            "chest",
+            "character",
+            "snapshot_id",
+            name="uq_inventory_snapshot",
         ),
     )
 
     id: int | None = Field(default=None, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE", index=True)
-    character: str = Field(max_length=64)
+    container: str = Field(max_length=5)  # bag | bank | chest
+    chest: int = Field(default=0, sa_type=SmallInteger)  # 1..10 for a chest, else 0
+    character: str = Field(max_length=64)  # for a chest: who saved it
     snapshot_id: int = Field(sa_type=BigInteger)
     captured_at: datetime
     slot_count: int = Field(sa_type=SmallInteger)
@@ -36,3 +43,16 @@ class InventorySlot(SQLModel, table=True):
     item_type: int | None = None
     item_grade: int | None = Field(default=None, sa_type=SmallInteger)
     count: int
+
+
+class ChestName(SQLModel, table=True):
+    """Last non-empty name per chest; outlives the two kept snapshots."""
+
+    __tablename__ = "inventory_chest_name"
+
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id", ondelete="CASCADE", primary_key=True
+    )
+    chest: int = Field(sa_type=SmallInteger, primary_key=True)
+    name: str = Field(max_length=15)
+    captured_at: datetime

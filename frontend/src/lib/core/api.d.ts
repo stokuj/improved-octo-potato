@@ -214,15 +214,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/inventory/characters/{character}": {
+    "/api/inventory/chests": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Read Bag */
-        get: operations["read_bag_api_inventory_characters__character__get"];
+        /** Read Chests */
+        get: operations["read_chests_api_inventory_chests_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -255,20 +255,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** BagRead */
-        BagRead: {
-            /** Character */
-            character: string;
-            /**
-             * Captured At
-             * Format: date-time
-             */
-            captured_at: string;
-            /** Previous Captured At */
-            previous_captured_at: string | null;
-            /** Slots */
-            slots: components["schemas"]["SlotRead"][];
-        };
         /** Body_import_files_api_import_post */
         Body_import_files_api_import_post: {
             /** Files */
@@ -302,6 +288,11 @@ export interface components {
         CharacterRead: {
             /** Character */
             character: string;
+            bag: components["schemas"]["GridRead"] | null;
+            bank: components["schemas"]["GridRead"] | null;
+        };
+        /** ChestRead */
+        ChestRead: {
             /**
              * Captured At
              * Format: date-time
@@ -313,6 +304,14 @@ export interface components {
             slot_count: number;
             /** Filled */
             filled: number;
+            /** Slots */
+            slots: components["schemas"]["SlotRead"][];
+            /** Chest */
+            chest: number;
+            /** Name */
+            name: string | null;
+            /** Saved By */
+            saved_by: string;
         };
         /** ErrorModel */
         ErrorModel: {
@@ -320,6 +319,25 @@ export interface components {
             detail: string | {
                 [key: string]: string;
             };
+        };
+        /**
+         * GridRead
+         * @description The newest snapshot of one place: a bag, a warehouse or a chest.
+         */
+        GridRead: {
+            /**
+             * Captured At
+             * Format: date-time
+             */
+            captured_at: string;
+            /** Previous Captured At */
+            previous_captured_at: string | null;
+            /** Slot Count */
+            slot_count: number;
+            /** Filled */
+            filled: number;
+            /** Slots */
+            slots: components["schemas"]["SlotRead"][];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -331,7 +349,7 @@ export interface components {
             /** Filename */
             filename: string;
             /** Kind */
-            kind: ("listings" | "market" | "inventory") | null;
+            kind: ("listings" | "market" | "inventory" | "chests") | null;
             /** Rows */
             rows: number;
             /** Inserted */
@@ -1031,13 +1049,11 @@ export interface operations {
             };
         };
     };
-    read_bag_api_inventory_characters__character__get: {
+    read_chests_api_inventory_chests_get: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                character: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -1048,16 +1064,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BagRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ChestRead"][];
                 };
             };
         };
