@@ -13,7 +13,11 @@
 	let error: string | null = $state(null);
 	let seq = 0;
 
-	const selected = $derived(page.url.searchParams.get('character') ?? characters[0]?.character ?? null);
+	// An unknown ?character= (renamed character, stale bookmark) falls back to the first tab.
+	const requested = $derived(page.url.searchParams.get('character'));
+	const selected = $derived(
+		characters.find((c) => c.character === requested)?.character ?? characters[0]?.character ?? null
+	);
 
 	const when = (x: string | null | undefined) => (x ? new Date(x + 'Z').toLocaleString('en-GB') : '—');
 

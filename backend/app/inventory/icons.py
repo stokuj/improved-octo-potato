@@ -31,7 +31,7 @@ class FetchBudgetExceeded(Exception):
 
 def valid_name(name: str) -> str | None:
     name = name.lower()
-    return name if _NAME.match(name) else None
+    return name if _NAME.fullmatch(name) else None
 
 
 async def fetch_codex(name: str) -> bytes | None:

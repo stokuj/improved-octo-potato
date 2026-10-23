@@ -93,3 +93,8 @@ def test_real_placeholder_hash_constant() -> None:
     assert icons.CODEX_PLACEHOLDER_SHA256 == (
         "17e787bf26c33e45813d82c103aaf42ddf48315a893a1b4be72d12ed26423c2a"
     )
+
+
+def test_trailing_newline_is_not_a_valid_name() -> None:
+    # `re.match(...$)` accepts "abc\n"; the public route must not.
+    assert icons.valid_name("icon_item_1\n") is None

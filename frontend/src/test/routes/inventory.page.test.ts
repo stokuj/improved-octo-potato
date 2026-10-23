@@ -81,6 +81,37 @@ describe('inventory page', () => {
 		expect(document.querySelector('[role="tablist"]')!.className).toContain('tabs-box');
 	});
 
+	it('opens the tooltip on keyboard focus: the focusable tile sits inside the .tooltip element', async () => {
+		(page as { url: URL }).url = new URL('http://localhost/inventory?character=Alpha');
+		mockFetch({
+			'/inventory/characters': { json: async () => characters },
+			'/inventory/characters/Alpha': { json: async () => bag('Alpha', 90) }
+		});
+		render(Page);
+		const tile = await waitFor(() => {
+			const t = document.querySelector<HTMLElement>('[data-testid="tile"][aria-label^="Leather"]');
+			expect(t).not.toBeNull();
+			return t!;
+		});
+		// DaisyUI shows the tip on .tooltip:has(:focus-visible), which matches descendants only.
+		expect(tile.classList.contains('tooltip')).toBe(false);
+		const wrapper = tile.parentElement!;
+		expect(wrapper.classList.contains('tooltip')).toBe(true);
+		expect(wrapper.getAttribute('data-tip')).toBe(tile.getAttribute('aria-label'));
+	});
+
+	it('falls back to the first character when ?character= is unknown', async () => {
+		(page as { url: URL }).url = new URL('http://localhost/inventory?character=Ghost');
+		const spy = mockFetch({
+			'/inventory/characters': { json: async () => characters },
+			'/inventory/characters/Alpha': { json: async () => bag('Alpha', 90) }
+		});
+		render(Page);
+		await waitFor(() => expect(document.querySelectorAll('[data-testid="tile"]')).toHaveLength(90));
+		expect(document.querySelector('[role="alert"]')).toBeNull();
+		expect(spy.mock.calls.some((c) => String(c[0]).includes('Ghost'))).toBe(false);
+	});
+
 	it('points to /import when there are no characters yet', async () => {
 		(page as { url: URL }).url = new URL('http://localhost/inventory');
 		mockFetch({ '/inventory/characters': { json: async () => [] } });

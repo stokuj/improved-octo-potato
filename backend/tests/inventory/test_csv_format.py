@@ -116,3 +116,7 @@ def test_bom_and_crlf() -> None:
 def test_unknown_header() -> None:
     with pytest.raises(CsvFormatError, match="unknown header"):
         parse_inventory(b"a,b\n1,2\n")
+
+
+def test_icon_with_trailing_newline_is_rejected() -> None:
+    assert normalize_icon("Game/ui/icon/icon_item_1\n") is None

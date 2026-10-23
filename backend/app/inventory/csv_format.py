@@ -46,7 +46,7 @@ class ParsedInventory:
 def normalize_icon(raw: str) -> str | None:
     """'Game/ui/icon/icon_item_0352.dds' -> 'icon_item_0352'; anything odd -> None."""
     name = raw.replace("\\", "/").rsplit("/", 1)[-1].rsplit(".", 1)[0].lower()
-    return name if _ICON.match(name) else None
+    return name if _ICON.fullmatch(name) else None
 
 
 @dataclass
