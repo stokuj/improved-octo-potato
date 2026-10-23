@@ -1,7 +1,10 @@
 # JSON-lines logging for the whole app, configured once, with the request id from a contextvar.
 import json
 import logging
+import re
 import sys
+import time
+import uuid
 from contextvars import ContextVar
 from datetime import UTC, datetime
 
@@ -67,7 +70,54 @@ def configure_logging(level: str = "INFO") -> None:
     handler._app_json = True
     root.addHandler(handler)
     root.setLevel(level)
-    for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+    for name in ("uvicorn", "uvicorn.error"):
         logger = logging.getLogger(name)
         logger.handlers = []
         logger.propagate = True
+    # Off for good: its line carries the query string, and http.request replaces it.
+    access = logging.getLogger("uvicorn.access")
+    access.handlers = []
+    access.propagate = False
+
+
+_VALID_ID = re.compile(r"[A-Za-z0-9-]{1,64}")
+_http_log = get_logger("app.http")
+
+
+class RequestIdMiddleware:
+    """Sets the request id, echoes it as X-Request-ID and logs one `http.request` line."""
+
+    def __init__(self, app) -> None:
+        self.app = app
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        incoming = dict(scope["headers"]).get(b"x-request-id", b"").decode("latin-1")
+        rid = incoming if _VALID_ID.fullmatch(incoming) else uuid.uuid4().hex
+        token = request_id.set(rid)
+        status = 500  # stays 500 when the app fails before it starts a response
+        started = time.perf_counter()
+
+        async def send_with_id(message) -> None:
+            nonlocal status
+            if message["type"] == "http.response.start":
+                status = message["status"]
+                headers = [*message.get("headers", []), (b"x-request-id", rid.encode())]
+                message = {**message, "headers": headers}
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_with_id)
+        finally:
+            ms = round((time.perf_counter() - started) * 1000, 1)
+            # Path only: a query string can carry an OAuth code.
+            _http_log.info(
+                "http.request",
+                method=scope["method"],
+                path=scope["path"],
+                status=status,
+                ms=ms,
+            )
+            request_id.reset(token)

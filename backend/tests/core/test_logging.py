@@ -73,5 +73,8 @@ def test_configure_logging_is_idempotent_and_keeps_other_handlers(caplog):
     ours = [h for h in root.handlers if isinstance(h.formatter, JsonFormatter)]
     assert len(ours) == 1
     assert caplog.handler in root.handlers
+    # Uvicorn's access line carries the query string; http.request replaces it.
     access = logging.getLogger("uvicorn.access")
-    assert access.handlers == [] and access.propagate
+    assert access.handlers == [] and not access.propagate
+    error = logging.getLogger("uvicorn.error")
+    assert error.handlers == [] and error.propagate
