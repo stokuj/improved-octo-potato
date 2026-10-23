@@ -10,7 +10,7 @@ class ImportRowError(BaseModel):
 
 class ImportFileResult(BaseModel):
     filename: str
-    kind: Literal["listings", "market", "inventory"] | None
+    kind: Literal["listings", "market", "inventory", "chests"] | None
     rows: int
     inserted: int
     updated: int

@@ -1,4 +1,5 @@
 import uuid
+from typing import Literal
 
 from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -9,18 +10,20 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.errors import NotFoundError
 from app.imports.schemas import ImportFileResult, ImportRowError, failed
 from app.inventory.csv_format import Snapshot, parse_inventory
-from app.inventory.models import InventorySlot, InventorySnapshot
+from app.inventory.models import ChestName, InventorySlot, InventorySnapshot
 from app.inventory.schemas import BagRead, CharacterRead, SlotRead
 from app.market.csv_format import CsvFormatError
 from app.market.services import MAX_ERRORS
 
-KEEP = 2  # newest + previous snapshot per character
+KEEP = 2  # newest + previous snapshot per place
 CHUNK_ROWS = 2_000  # 7 columns x 2000 stays under asyncpg's 32767 bind params
 
 
 async def _store(session: AsyncSession, user_id: uuid.UUID, snap: Snapshot) -> None:
     row = InventorySnapshot(
         user_id=user_id,
+        container=snap.container,
+        chest=snap.chest,
         character=snap.character,
         snapshot_id=snap.snapshot_id,
         captured_at=snap.captured_at,
@@ -43,17 +46,23 @@ async def _store(session: AsyncSession, user_id: uuid.UUID, snap: Snapshot) -> N
         await session.exec(pg_insert(InventorySlot).values(slots[i : i + CHUNK_ROWS]))  # type: ignore[call-overload]
 
 
-async def _import_character(
-    session: AsyncSession, user_id: uuid.UUID, character: str, snaps: list[Snapshot]
+async def _import_place(
+    session: AsyncSession, user_id: uuid.UUID, snaps: list[Snapshot]
 ) -> tuple[int, int]:
-    """Keep the KEEP newest of stored + uploaded snapshots. Returns (inserted, skipped) lines."""
-    stored = (
-        await session.exec(
-            select(InventorySnapshot)
-            .where(InventorySnapshot.user_id == user_id)
-            .where(InventorySnapshot.character == character)
-        )
-    ).all()
+    """Keep the KEEP newest of stored + uploaded snapshots of one place.
+
+    Returns (inserted, skipped) lines.
+    """
+    first = snaps[0]
+    stmt = (
+        select(InventorySnapshot)
+        .where(InventorySnapshot.user_id == user_id)
+        .where(InventorySnapshot.container == first.container)
+        .where(InventorySnapshot.chest == first.chest)
+    )
+    if first.container != "chest":  # a chest is one place whoever saved it
+        stmt = stmt.where(InventorySnapshot.character == first.character)
+    stored = (await session.exec(stmt)).all()
     known = {s.snapshot_id for s in stored}
     new = [s for s in snaps if s.snapshot_id not in known]
     skipped = sum(s.lines for s in snaps if s.snapshot_id in known)
@@ -80,33 +89,73 @@ async def _import_character(
     return inserted, skipped
 
 
+async def _save_chest_names(
+    session: AsyncSession, user_id: uuid.UUID, snaps: list[Snapshot]
+) -> None:
+    """An empty name means no change, so only named saves count; the newest wins."""
+    newest: dict[int, Snapshot] = {}
+    for s in snaps:
+        if s.name and (
+            s.chest not in newest
+            or (s.captured_at, s.snapshot_id)
+            > (newest[s.chest].captured_at, newest[s.chest].snapshot_id)
+        ):
+            newest[s.chest] = s
+    if not newest:
+        return
+    stmt = pg_insert(ChestName).values(
+        [
+            {
+                "user_id": user_id,
+                "chest": n,
+                "name": s.name,
+                "captured_at": s.captured_at,
+            }
+            for n, s in newest.items()
+        ]
+    )
+    await session.exec(  # type: ignore[call-overload]
+        stmt.on_conflict_do_update(
+            index_elements=["user_id", "chest"],
+            set_={"name": stmt.excluded.name, "captured_at": stmt.excluded.captured_at},
+            where=ChestName.captured_at < stmt.excluded.captured_at,
+        )
+    )
+
+
 async def import_csv(
-    session: AsyncSession, user_id: uuid.UUID, filename: str, data: bytes
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    filename: str,
+    data: bytes,
+    kind: Literal["inventory", "chests"],
 ) -> ImportFileResult:
     try:
         parsed = parse_inventory(data)
     except CsvFormatError as e:
-        return failed(filename, "inventory", 0, str(e))
+        return failed(filename, kind, 0, str(e))
 
-    by_character: dict[str, list[Snapshot]] = {}
+    by_place: dict[tuple[str, int, str], list[Snapshot]] = {}
     for snap in parsed.snapshots:
-        by_character.setdefault(snap.character, []).append(snap)
+        who = "" if snap.container == "chest" else snap.character
+        by_place.setdefault((snap.container, snap.chest, who), []).append(snap)
 
     inserted, skipped = 0, parsed.skipped
     try:
-        for character, snaps in by_character.items():
-            i, s = await _import_character(session, user_id, character, snaps)
+        for snaps in by_place.values():
+            i, s = await _import_place(session, user_id, snaps)
             inserted, skipped = inserted + i, skipped + s
+        await _save_chest_names(session, user_id, parsed.snapshots)
         await session.commit()
     except SQLAlchemyError as e:
         await session.rollback()
         return failed(
-            filename, "inventory", parsed.rows, f"database error: {type(e).__name__}"
+            filename, kind, parsed.rows, f"database error: {type(e).__name__}"
         )
 
     return ImportFileResult(
         filename=filename,
-        kind="inventory",
+        kind=kind,
         rows=parsed.rows,
         inserted=inserted,
         updated=0,
