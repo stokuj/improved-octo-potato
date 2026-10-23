@@ -55,7 +55,7 @@ test.describe('market journey', () => {
     await page.goto('/market');
     await expect(page.locator('select')).toBeVisible();
     await page.goto('/import');
-    await expect(page.locator('body')).toContainText('Only the admin can import files.');
+    await expect(page.locator('body')).toContainText('Sign in to import files.');
     await ctx.close();
   });
 });

@@ -2,6 +2,21 @@
 
 Continuity notes between sessions. Update at the end of each session.
 
+## 2026-10-23: Inventory (bag) view
+
+Branch `feature/inventory`, stacked on `feature/google-login`. Plan: `superpowers/plans/2026-10-23-inventory.md`.
+
+- New modules:
+  - `imports`: one `POST /api/import` for all CSVs; market files are admin only;
+  - `inventory`: keep-two snapshots per user and character, a read API with change flags, and a Codex icon cache.
+- Frontend: `/inventory` with character tabs, a 10-column tile grid, grade-colour placeholders and tooltips.
+- `/import` is open to any signed-in user.
+
+Next:
+- ArcheBag writes the `icon` column;
+- then warehouse and house chests;
+- player registration later.
+
 ## 2026-10-21: Google-only login
 
 Branch `feature/google-login`, plan `superpowers/plans/2026-10-21-google-login.md`.

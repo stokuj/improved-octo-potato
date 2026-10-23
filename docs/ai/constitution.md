@@ -5,7 +5,8 @@ Rules that do not change without a deliberate decision. When you change one, rec
 ## API
 
 - All endpoints live under `/api/`; the admin is at `/admin`, not under `/api`.
-- Only a superuser can import (`POST /api/market/import`). Market reads are public.
+- Only a superuser can import market files through `POST /api/import`. Any signed-in active user can import their own `inventory.csv`. Market reads are public.
+- Inventory data is per user. Every inventory query filters by the signed-in user, and another user's character is 404.
 - Production has no password login: Google sign-in only. Google sign-in never creates accounts; they come only from `create-superuser`.
 - The import is idempotent: the same file uploaded twice changes nothing.
 - Newest scan wins per (item, date). An older scan never overwrites newer data.
@@ -30,6 +31,8 @@ Rules that do not change without a deliberate decision. When you change one, rec
 
 - Tests use a real PostgreSQL (`app_test`), with no DB mocks.
 - Test data is unique: the DB is not cleaned between tests.
+- No real character names in fixtures or docs: use made-up names (`Alpha`, `Bravo`).
+- Game icons are never committed; they live in the icon cache volume.
 - Tests mirror the code layout.
 
 ## Git & workflow

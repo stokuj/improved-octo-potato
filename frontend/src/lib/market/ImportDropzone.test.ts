@@ -11,12 +11,15 @@ beforeEach(() => restoreFetch());
 
 describe('ImportDropzone', () => {
 	it('uploads every dropped file in one request', async () => {
-		const fetchSpy = mockFetch({ '/market/import': { json: async () => [result('a.csv'), result('b.csv')] } });
+		const fetchSpy = mockFetch({ '/import': { json: async () => [result('a.csv'), result('b.csv')] } });
 		const onResults = vi.fn();
 		render(ImportDropzone, { onResults });
 		const files = [new File(['x'], 'a.csv'), new File(['y'], 'b.csv')];
 		await fireEvent.drop(document.querySelector('[data-testid="dropzone"]')!, { dataTransfer: { files } });
 		await waitFor(() => expect(onResults).toHaveBeenCalledWith([result('a.csv'), result('b.csv')]));
+		const url = String(fetchSpy.mock.calls[0][0]);
+		expect(url.endsWith('/import')).toBe(true);
+		expect(url).not.toContain('/market/');
 		const init = fetchSpy.mock.calls[0][1] as RequestInit;
 		expect(init.method).toBe('POST');
 		expect(init.credentials).toBe('include');
@@ -24,7 +27,7 @@ describe('ImportDropzone', () => {
 	});
 
 	it('shows a session message on 401', async () => {
-		mockFetch({ '/market/import': { status: 401 } });
+		mockFetch({ '/import': { status: 401 } });
 		render(ImportDropzone, { onResults: () => {} });
 		const input = document.querySelector('input[type="file"]') as HTMLInputElement;
 		await fireEvent.change(input, { target: { files: [new File(['x'], 'a.csv')] } });
