@@ -21,8 +21,8 @@
 	aria-label={label}
 	data-tip={label}
 	class="tooltip relative size-9 rounded-md focus:outline-2 focus:outline-primary {slot.item == null
-		? 'bg-base-300'
-		: ''}"
+		? 'border border-dashed border-base-content/20'
+		: 'ring-1 ring-black/15'}"
 	style={slot.item != null && (!slot.icon || iconFailed) ? `background:${gradeColor(slot.item_grade)}` : ''}
 >
 	{#if slot.item != null && slot.icon && !iconFailed}

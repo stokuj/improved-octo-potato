@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, waitFor, fireEvent } from '@testing-library/svelte';
 import { mockFetch, restoreFetch } from '../mocks/fetch';
 import { page } from '$app/state';
+import type { BagRead } from '$lib/core/types';
 import Page from '../../routes/inventory/+page.svelte';
 
 const characters = [
@@ -9,7 +10,7 @@ const characters = [
 	{ character: 'Bravo', captured_at: '2026-10-23T10:01:00', previous_captured_at: '2026-10-22T10:00:00', slot_count: 150, filled: 1 }
 ];
 
-function bag(character: string, size: number) {
+function bag(character: string, size: number): BagRead {
 	return {
 		character,
 		captured_at: '2026-10-23T10:00:00',
@@ -58,6 +59,26 @@ describe('inventory page', () => {
 		expect(tile.getAttribute('aria-label')).toBe('Leather · None (0) · ×412 · +120');
 		await fireEvent.error(img);
 		await waitFor(() => expect(tile.querySelector('img')).toBeNull());
+	});
+
+	it('draws empty slots differently from grade-coloured items', async () => {
+		(page as { url: URL }).url = new URL('http://localhost/inventory?character=Alpha');
+		const b = bag('Alpha', 90);
+		b.slots[3] = { ...b.slots[3], icon: null };
+		mockFetch({
+			'/inventory/characters': { json: async () => characters },
+			'/inventory/characters/Alpha': { json: async () => b }
+		});
+		render(Page);
+		const tiles = await waitFor(() => {
+			const t = document.querySelectorAll<HTMLElement>('[data-testid="tile"]');
+			expect(t).toHaveLength(90);
+			return t;
+		});
+		expect(tiles[3].style.background).not.toBe('');
+		expect(tiles[0].style.background).toBe('');
+		expect(tiles[0].className).toContain('border-dashed');
+		expect(document.querySelector('[role="tablist"]')!.className).toContain('tabs-box');
 	});
 
 	it('points to /import when there are no characters yet', async () => {

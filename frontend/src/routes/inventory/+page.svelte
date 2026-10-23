@@ -61,7 +61,7 @@
 		</p>
 	{:else if characters.length}
 		<div class="flex flex-wrap items-center gap-3">
-			<div role="tablist" class="tabs tabs-boxed">
+			<div role="tablist" class="tabs tabs-box">
 				{#each characters as c (c.character)}
 					<button
 						role="tab"
