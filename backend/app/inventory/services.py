@@ -36,7 +36,6 @@ async def _store(session: AsyncSession, user_id: uuid.UUID, snap: Snapshot) -> N
             "item_type": s.item_type,
             "item_grade": s.item_grade,
             "count": s.count,
-            "icon": s.icon,
         }
         for s in snap.slots
     ]
@@ -205,7 +204,6 @@ async def get_bag(session: AsyncSession, user_id: uuid.UUID, character: str) -> 
                 item_type=s.item_type,
                 item_grade=s.item_grade,
                 count=s.count,
-                icon=s.icon,
                 change=flag,  # type: ignore[arg-type]
                 delta=delta,
             )

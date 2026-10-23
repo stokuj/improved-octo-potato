@@ -17,8 +17,8 @@ function bag(character: string, size: number): BagRead {
 		previous_captured_at: null,
 		slots: Array.from({ length: size }, (_, i) =>
 			i === 3
-				? { slot: 4, item: 'Leather', item_type: 16327, item_grade: 0, count: 412, icon: 'icon_item_0352', change: 'up', delta: 120 }
-				: { slot: i + 1, item: null, item_type: null, item_grade: null, count: 0, icon: null, change: null, delta: null }
+				? { slot: 4, item: 'Leather', item_type: 16327, item_grade: 0, count: 412, change: 'up', delta: 120 }
+				: { slot: i + 1, item: null, item_type: null, item_grade: null, count: 0, change: null, delta: null }
 		)
 	};
 }
@@ -51,7 +51,7 @@ describe('inventory page', () => {
 		});
 		render(Page);
 		const img = await waitFor(() => {
-			const el = document.querySelector('img[src$="/inventory/icons/icon_item_0352.png"]');
+			const el = document.querySelector('img[src$="/inventory/icons/16327.png"]');
 			expect(el).not.toBeNull();
 			return el!;
 		});
@@ -59,15 +59,14 @@ describe('inventory page', () => {
 		expect(tile.getAttribute('aria-label')).toBe('Leather · None (0) · ×412 · +120');
 		await fireEvent.error(img);
 		await waitFor(() => expect(tile.querySelector('img')).toBeNull());
+		expect((tile as HTMLElement).style.background).not.toBe('');
 	});
 
 	it('draws empty slots differently from grade-coloured items', async () => {
 		(page as { url: URL }).url = new URL('http://localhost/inventory?character=Alpha');
-		const b = bag('Alpha', 90);
-		b.slots[3] = { ...b.slots[3], icon: null };
 		mockFetch({
 			'/inventory/characters': { json: async () => characters },
-			'/inventory/characters/Alpha': { json: async () => b }
+			'/inventory/characters/Alpha': { json: async () => bag('Alpha', 90) }
 		});
 		render(Page);
 		const tiles = await waitFor(() => {

@@ -231,7 +231,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/inventory/icons/{name}.png": {
+    "/api/inventory/icons/{item_type}.png": {
         parameters: {
             query?: never;
             header?: never;
@@ -242,7 +242,7 @@ export interface paths {
          * Read Icon
          * @description Public: game art only, no user data. 404 lets the frontend show the grade colour.
          */
-        get: operations["read_icon_api_inventory_icons__name__png_get"];
+        get: operations["read_icon_api_inventory_icons__item_type__png_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -420,8 +420,6 @@ export interface components {
             item_grade: number | null;
             /** Count */
             count: number;
-            /** Icon */
-            icon: string | null;
             /** Change */
             change: ("new" | "up" | "down") | null;
             /** Delta */
@@ -1064,12 +1062,12 @@ export interface operations {
             };
         };
     };
-    read_icon_api_inventory_icons__name__png_get: {
+    read_icon_api_inventory_icons__item_type__png_get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                name: string;
+                item_type: number;
             };
             cookie?: never;
         };

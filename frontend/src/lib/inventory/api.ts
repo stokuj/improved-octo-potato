@@ -17,6 +17,6 @@ export function fetchBag(character: string): Promise<BagRead> {
 	return getJson(`/inventory/characters/${encodeURIComponent(character)}`);
 }
 
-export function iconUrl(name: string): string {
-	return `${API_BASE_URL}/inventory/icons/${name}.png`;
+export function iconUrl(itemType: number): string {
+	return `${API_BASE_URL}/inventory/icons/${itemType}.png`;
 }
