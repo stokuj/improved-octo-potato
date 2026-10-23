@@ -6,9 +6,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.errors import NotFoundError
 from app.imports.schemas import ImportFileResult, ImportRowError, failed
 from app.inventory.csv_format import Snapshot, parse_inventory
 from app.inventory.models import InventorySlot, InventorySnapshot
+from app.inventory.schemas import BagRead, CharacterRead, SlotRead
 from app.market.csv_format import CsvFormatError
 from app.market.services import MAX_ERRORS
 
@@ -115,4 +117,102 @@ async def import_csv(
             ImportRowError(line=e.line, reason=e.reason)
             for e in parsed.errors[:MAX_ERRORS]
         ],
+    )
+
+
+async def _snapshots(
+    session: AsyncSession, user_id: uuid.UUID, character: str | None = None
+):
+    """The user's snapshots, newest first; optionally for one character."""
+    stmt = select(InventorySnapshot).where(InventorySnapshot.user_id == user_id)
+    if character is not None:
+        stmt = stmt.where(InventorySnapshot.character == character)
+    stmt = stmt.order_by(
+        InventorySnapshot.captured_at.desc(),  # type: ignore[attr-defined]
+        InventorySnapshot.snapshot_id.desc(),  # type: ignore[attr-defined]
+    )
+    return (await session.exec(stmt)).all()
+
+
+async def _slots(session: AsyncSession, snapshot_pk: int) -> list[InventorySlot]:
+    stmt = (
+        select(InventorySlot)
+        .where(InventorySlot.snapshot == snapshot_pk)
+        .order_by(InventorySlot.slot)  # type: ignore[arg-type]
+    )
+    return list((await session.exec(stmt)).all())
+
+
+def _totals(slots: list[InventorySlot]) -> dict[tuple, int]:
+    totals: dict[tuple, int] = {}
+    for s in slots:
+        if s.item is not None:
+            key = (s.item_type, s.item_grade)
+            totals[key] = totals.get(key, 0) + s.count
+    return totals
+
+
+async def list_characters(
+    session: AsyncSession, user_id: uuid.UUID
+) -> list[CharacterRead]:
+    newest: dict[str, InventorySnapshot] = {}
+    previous: dict[str, InventorySnapshot] = {}
+    for snap in await _snapshots(session, user_id):
+        (previous if snap.character in newest else newest).setdefault(
+            snap.character, snap
+        )
+    out = []
+    for name in sorted(newest):
+        snap = newest[name]
+        filled = sum(1 for s in await _slots(session, snap.id) if s.item is not None)  # type: ignore[arg-type]
+        prev = previous.get(name)
+        out.append(
+            CharacterRead(
+                character=name,
+                captured_at=snap.captured_at,
+                previous_captured_at=prev.captured_at if prev else None,
+                slot_count=snap.slot_count,
+                filled=filled,
+            )
+        )
+    return out
+
+
+async def get_bag(session: AsyncSession, user_id: uuid.UUID, character: str) -> BagRead:
+    snaps = await _snapshots(session, user_id, character)
+    if not snaps:
+        raise NotFoundError("character not found")
+    now = await _slots(session, snaps[0].id)  # type: ignore[arg-type]
+    before = _totals(await _slots(session, snaps[1].id)) if len(snaps) > 1 else None  # type: ignore[arg-type]
+    totals = _totals(now)
+
+    def change(s: InventorySlot) -> tuple[str | None, int | None]:
+        if before is None or s.item is None:
+            return None, None
+        key = (s.item_type, s.item_grade)
+        if key not in before:
+            return "new", totals[key]
+        delta = totals[key] - before[key]
+        return ("up" if delta > 0 else "down" if delta < 0 else None), delta
+
+    slots = []
+    for s in now:
+        flag, delta = change(s)
+        slots.append(
+            SlotRead(
+                slot=s.slot,
+                item=s.item,
+                item_type=s.item_type,
+                item_grade=s.item_grade,
+                count=s.count,
+                icon=s.icon,
+                change=flag,  # type: ignore[arg-type]
+                delta=delta,
+            )
+        )
+    return BagRead(
+        character=character,
+        captured_at=snaps[0].captured_at,
+        previous_captured_at=snaps[1].captured_at if len(snaps) > 1 else None,
+        slots=slots,
     )
