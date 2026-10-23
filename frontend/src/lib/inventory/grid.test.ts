@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ALL, changeDot, chestLabel, pickTab, slotPosition, tileLabel } from './grid';
+import { ALL, changeDot, chestLabel, formatCount, pickTab, slotPosition, tileLabel } from './grid';
 import type { SlotRead } from '$lib/core/types';
 
 const slot = (over: Partial<SlotRead>): SlotRead => ({
@@ -56,5 +56,13 @@ describe('chestLabel', () => {
 	it('uses the name, or the number when never named', () => {
 		expect(chestLabel({ chest: 1, name: 'Treehouse' })).toBe('Treehouse');
 		expect(chestLabel({ chest: 2, name: null })).toBe('Chest 2');
+	});
+});
+
+describe('formatCount', () => {
+	it('keeps up to 4 digits and shortens bigger stacks so they fit a small tile', () => {
+		expect(formatCount(9999)).toBe('9999');
+		expect(formatCount(10000)).toBe('10k');
+		expect(formatCount(12345)).toBe('12k');
 	});
 });

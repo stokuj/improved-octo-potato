@@ -6,7 +6,7 @@
 	let { title, grid, detail }: { title: string; grid: GridRead; detail?: string } = $props();
 </script>
 
-<div data-testid="grid-panel" class="space-y-1">
+<div data-testid="grid-panel" class="min-w-0 space-y-1">
 	<h3 class="text-sm font-bold">
 		{title}
 		<span class="font-normal opacity-60">{grid.filled} / {grid.slot_count}{detail ? ` · ${detail}` : ''}</span>

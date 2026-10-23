@@ -5,7 +5,8 @@
 	let { slots }: { slots: SlotRead[] } = $props();
 </script>
 
-<div class="grid w-fit grid-cols-10 gap-[3px]">
+<!-- Fluid: tiles shrink with the panel; max-w-96 keeps a lone grid at about the old 36px tiles. -->
+<div class="grid w-full max-w-96 grid-cols-10 gap-[2px]">
 	{#each slots as slot (slot.slot)}
 		<InventoryTile {slot} />
 	{/each}

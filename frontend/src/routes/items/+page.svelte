@@ -70,8 +70,9 @@
 	{#if error}
 		<div role="alert" class="alert alert-error text-sm">{error}</div>
 	{:else if loaded}
-		<div class="flex flex-wrap items-start gap-8">
-			<section aria-label="Characters" class="space-y-4">
+		<!-- Wide screens: two equal halves, each with two grids per row (20 columns a side). -->
+		<div class="flex flex-col gap-6 lg:flex-row lg:items-start">
+			<section aria-label="Characters" class="min-w-0 space-y-4 lg:flex-1 lg:basis-0">
 				{#if characters.length}
 					{@render tabs(
 						'character',
@@ -81,7 +82,7 @@
 					{#each shownCharacters as c (c.character)}
 						<div class="space-y-2">
 							{#if character === ALL}<h2 class="font-bold">{c.character}</h2>{/if}
-							<div class="flex flex-wrap items-start gap-4">
+							<div class="grid items-start gap-3 sm:grid-cols-2">
 								{#if c.bag}<GridPanel title="Bag" grid={c.bag} />{/if}
 								{#if c.bank}<GridPanel title="Warehouse" grid={c.bank} />{/if}
 							</div>
@@ -95,10 +96,9 @@
 				{/if}
 			</section>
 
-			<!-- Takes the width left by the characters and wraps its chests; drops below only when under 25rem. -->
 			<section
 				aria-label="House chests"
-				class="min-w-0 flex-1 basis-[25rem] space-y-4 lg:border-l lg:border-base-content/10 lg:pl-8"
+				class="min-w-0 space-y-4 lg:flex-1 lg:basis-0 lg:border-l lg:border-base-content/10 lg:pl-6"
 			>
 				<h2 class="text-xs font-semibold uppercase tracking-wide opacity-60">House chests</h2>
 				{#if chests.length}
@@ -107,7 +107,7 @@
 						chest,
 						chests.map((c) => ({ value: String(c.chest), label: chestLabel(c) }))
 					)}
-					<div class="flex flex-wrap items-start gap-4">
+					<div class="grid items-start gap-3 sm:grid-cols-2">
 						{#each shownChests as c (c.chest)}
 							<GridPanel title={chestLabel(c)} grid={c} detail="saved by {c.saved_by}" />
 						{/each}

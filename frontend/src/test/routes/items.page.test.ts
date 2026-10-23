@@ -121,6 +121,21 @@ describe('items page', () => {
 		expect(tiles[3].parentElement!.getAttribute('data-tip')).toBe(tiles[3].getAttribute('aria-label'));
 	});
 
+	it('opens tooltips of the right half to the left and shortens big counts', async () => {
+		const big = grid(10);
+		big.slots[9] = { slot: 10, item: 'Leather', item_type: 16327, item_grade: 0, count: 12345, change: null, delta: null };
+		open('?character=Bravo', { characters: [{ character: 'Bravo', bag: big, bank: null }] });
+		const tiles = await waitFor(() => {
+			const t = section('Characters').querySelectorAll<HTMLElement>('[data-testid="tile"]');
+			expect(t).toHaveLength(10);
+			return t;
+		});
+		expect(tiles[0].parentElement!.classList.contains('tooltip-left')).toBe(false);
+		expect(tiles[9].parentElement!.classList.contains('tooltip-left')).toBe(true);
+		expect(tiles[9].textContent!.trim()).toBe('12k');
+		expect(tiles[9].getAttribute('aria-label')).toContain('×12345');
+	});
+
 	it('explains how to get data', async () => {
 		open('', { characters: [], chests: [] });
 		await waitFor(() => expect(document.querySelector('a[href="/import"]')).not.toBeNull());
