@@ -3,6 +3,8 @@ import uuid
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.imports.schemas import ImportFileResult, failed
+from app.inventory import services as inventory
+from app.inventory.csv_format import INVENTORY_HEADER, INVENTORY_HEADER_ICON
 from app.market import services as market
 from app.market.csv_format import LISTINGS_HEADER, MARKET_HEADER
 
@@ -27,7 +29,10 @@ async def import_file(
     """Route one uploaded CSV to its module by its exact header."""
     if len(data) > market.MAX_FILE_BYTES:
         return failed(filename, None, 0, "file larger than 50 MB")
-    kind = _MARKET_KINDS.get(_header(data))
+    header = _header(data)
+    if header in (INVENTORY_HEADER, INVENTORY_HEADER_ICON):
+        return await inventory.import_csv(session, user_id, filename, data)
+    kind = _MARKET_KINDS.get(header)
     if kind and not is_superuser:
         return failed(filename, kind, _data_lines(data), "admin only")
     return await market.import_csv(session, filename, data)
