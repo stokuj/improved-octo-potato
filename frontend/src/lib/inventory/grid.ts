@@ -1,5 +1,5 @@
 // Pure helpers for the item grids: slot position, tile label, change dot, tabs and times.
-import type { SlotRead } from '$lib/core/types';
+import type { CharacterRead, SlotRead } from '$lib/core/types';
 import { gradeName } from './grades';
 
 export const COLUMNS = 10; // the in-game bag grid; slot 1 is top-left, rows fill left to right
@@ -35,6 +35,30 @@ export function pickTab(value: string | null, options: string[]): string {
 
 export function chestLabel(c: { chest: number; name: string | null }): string {
 	return c.name ?? `Chest ${c.chest}`;
+}
+
+// Lowercase words without punctuation or the word "chest": "Farmer's large" and "Farmer's Large Chest" both give "farmers large".
+const chestWords = (s: string) =>
+	s.toLowerCase().replace(/\bchest\b/g, ' ').replace(/['’]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+
+/**
+ * The character a chest belongs to, or null for a house (land) chest.
+ * A bag chest opens only from its owner's bag, so it belongs to the character who saved it
+ * when that character's bag holds an item whose name starts with the chest's name.
+ * shortcut: matches typed names, not a game id; a land chest named after a bag item lands under the character.
+ */
+export function chestOwner(
+	c: { name: string | null; saved_by: string },
+	characters: Pick<CharacterRead, 'character' | 'bag'>[]
+): string | null {
+	const name = chestWords(c.name ?? '');
+	if (!name) return null;
+	const bag = characters.find((x) => x.character === c.saved_by)?.bag;
+	const match = bag?.slots.some((s) => {
+		const item = s.item == null ? '' : chestWords(s.item);
+		return item === name || item.startsWith(name + ' ');
+	});
+	return match ? c.saved_by : null;
 }
 
 export function snapshotTime(x: string | null | undefined): string {

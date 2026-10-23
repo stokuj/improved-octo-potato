@@ -137,6 +137,22 @@ describe('items page', () => {
 		expect(tiles[9].getAttribute('aria-label')).toContain('×12345');
 	});
 
+	it("shows a bag chest under the character whose bag holds it, not with the house chests", async () => {
+		const bag = grid(20);
+		bag.slots[12] = { slot: 13, item: "Adventurer's Chest", item_type: 9003195, item_grade: 0, count: 1, change: null, delta: null };
+		const data = {
+			characters: [{ character: 'Alpha', bag, bank: grid(30) }, characters[1]],
+			chests: [...chests, { ...grid(100), chest: 5, name: "Adventurer's", saved_by: 'Alpha' }]
+		};
+		open('', data);
+		await waitFor(() => expect(panels('Characters')).toHaveLength(4));
+		expect(titles('Characters')).toEqual(['Bag', 'Warehouse', "Adventurer's", 'Bag'].map((t) => expect.stringContaining(t)));
+		expect(titles('House chests')).toEqual(['Treehouse', 'Chest 2'].map((t) => expect.stringContaining(t)));
+		expect(tab('House chests', "Adventurer's")).toBeUndefined();
+		await fireEvent.click(tab('Characters', 'Bravo'));
+		await waitFor(() => expect(panels('Characters')).toHaveLength(1));
+	});
+
 	it('explains how to get data', async () => {
 		open('', { characters: [], chests: [] });
 		await waitFor(() => expect(document.querySelector('a[href="/import"]')).not.toBeNull());

@@ -44,6 +44,8 @@ Mockups: `.superpowers/brainstorm/183378-1792762547/content/items-v4-e1-all.html
 
 **Changed after the first build (user, 2026-10-23):** from 1280px wide, each side shows two grids per row (bag and warehouse on the left, two chests on the right), 20 columns a side; tiles are fluid instead of a fixed 36px, and counts from 10 000 read as `10k`. Narrower screens stack the two sides.
 
+**Changed again (user, 2026-10-23): bag chests go with their character.** A chest item in a character's bag (for example Adventurer's Chest) opens only from that bag, so the character who saved it owns it. Such a chest shows on the left after that character's bag and warehouse; the right keeps only house (land) chests. The file has no chest id, so the app matches names: a chest belongs to the character who saved it when that character's newest bag holds an item whose name starts with the chest's name (case, punctuation and the word "Chest" ignored, whole words only). Unnamed chests and chests with no matching bag item are house chests. This is computed in the frontend (`chestOwner` in `grid.ts`); the API is unchanged.
+
 ## Data contracts (ArcheBag step 7d, `ArcheMarket/llm-wiki/project/step7d-design.md`)
 
 `inventory.csv`, exact header:

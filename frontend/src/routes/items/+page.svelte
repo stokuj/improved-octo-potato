@@ -5,7 +5,7 @@
 	import type { CharacterRead, ChestRead } from '$lib/core/types';
 	import { fetchCharacters, fetchChests } from '$lib/inventory/api';
 	import GridPanel from '$lib/inventory/GridPanel.svelte';
-	import { ALL, chestLabel, pickTab } from '$lib/inventory/grid';
+	import { ALL, chestLabel, chestOwner, pickTab } from '$lib/inventory/grid';
 	import { ApiError } from '$lib/market/api';
 
 	let characters: CharacterRead[] = $state([]);
@@ -20,14 +20,17 @@
 			characters.map((c) => c.character)
 		)
 	);
+	// A chest kept in a character's bag shows with that character; the rest are house (land) chests.
+	const owner = $derived(new Map(chests.map((c) => [c.chest, chestOwner(c, characters)])));
+	const houseChests = $derived(chests.filter((c) => !owner.get(c.chest)));
 	const chest = $derived(
 		pickTab(
 			page.url.searchParams.get('chest'),
-			chests.map((c) => String(c.chest))
+			houseChests.map((c) => String(c.chest))
 		)
 	);
 	const shownCharacters = $derived(character === ALL ? characters : characters.filter((c) => c.character === character));
-	const shownChests = $derived(chest === ALL ? chests : chests.filter((c) => String(c.chest) === chest));
+	const shownChests = $derived(chest === ALL ? houseChests : houseChests.filter((c) => String(c.chest) === chest));
 
 	onMount(async () => {
 		try {
@@ -86,6 +89,9 @@
 							<div class="grid items-start gap-3 sm:grid-cols-2">
 								{#if c.bag}<GridPanel title="Bag" grid={c.bag} />{/if}
 								{#if c.bank}<GridPanel title="Warehouse" grid={c.bank} />{/if}
+								{#each chests.filter((x) => owner.get(x.chest) === c.character) as x (x.chest)}
+									<GridPanel title={chestLabel(x)} grid={x} />
+								{/each}
 							</div>
 						</div>
 					{/each}
@@ -102,11 +108,11 @@
 				class="min-w-0 space-y-4 xl:flex-1 xl:basis-0 xl:border-l xl:border-base-content/10 xl:pl-6"
 			>
 				<h2 class="text-xs font-semibold uppercase tracking-wide opacity-60">House chests</h2>
-				{#if chests.length}
+				{#if houseChests.length}
 					{@render tabs(
 						'chest',
 						chest,
-						chests.map((c) => ({ value: String(c.chest), label: chestLabel(c) }))
+						houseChests.map((c) => ({ value: String(c.chest), label: chestLabel(c) }))
 					)}
 					<div class="grid items-start gap-3 sm:grid-cols-2">
 						{#each shownChests as c (c.chest)}
@@ -115,7 +121,7 @@
 					</div>
 				{:else}
 					<p class="text-sm opacity-70">
-						No chests yet. Click <b>Chest</b> in game, save an open chest, then upload <code>chests.csv</code> on
+						No house chests yet. Click <b>Chest</b> in game, save an open chest, then upload <code>chests.csv</code> on
 						<a href="/import" class="link link-primary">Import</a>.
 					</p>
 				{/if}

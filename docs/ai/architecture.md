@@ -149,8 +149,8 @@ How `/summary` is computed. "Today" is the item's newest day:
 |---|---|
 | `lib/core/` | API base URL, auth state (Svelte 5 runes + context), `formatCurrency`, generated `api.d.ts` + `types.ts` |
 | `lib/market/` | API helpers, `chart.ts` (pure ECharts option builder), `MarketChart`, `ListingsTable`, `SummaryTable`, `ImportDropzone` |
-| `lib/inventory/` | API helpers, `grid.ts` (slot position, tile label, change dot, `pickTab`, `chestLabel`, `snapshotTime`), `grades.ts` (grade names and pastel placeholder colours), `GridPanel`, `InventoryGrid`, `InventoryTile` |
-| `routes/` | `/` → `/market`, `/market`, `/items` (characters left, house chests right; `?character=` and `?chest=`, `All` by default), `/inventory` → `/items`, `/import` (signed in), `/auth` (Google button; password form when `PUBLIC_PASSWORD_LOGIN=true`), `/auth/callback`, `/about` |
+| `lib/inventory/` | API helpers, `grid.ts` (slot position, tile label, change dot, `pickTab`, `chestLabel`, `chestOwner`, `snapshotTime`), `grades.ts` (grade names and pastel placeholder colours), `GridPanel`, `InventoryGrid`, `InventoryTile` |
+| `routes/` | `/` → `/market`, `/market`, `/items` (characters left, each with the chests in their bag; house chests right; `?character=` and `?chest=`, `All` by default), `/inventory` → `/items`, `/import` (signed in), `/auth` (Google button; password form when `PUBLIC_PASSWORD_LOGIN=true`), `/auth/callback`, `/about` |
 
 - The chart is one ECharts instance with two stacked panels sharing the date axis: daily and 7-day average lines on top, volume bars below. It uses the SVG renderer.
 - CSP `connect-src` and `img-src` allow the origin of `PUBLIC_API_URL`, set in `svelte.config.js`. Icons are served by the API.

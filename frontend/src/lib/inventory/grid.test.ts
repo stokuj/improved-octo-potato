@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ALL, changeDot, chestLabel, formatCount, pickTab, slotPosition, tileLabel } from './grid';
+import { ALL, changeDot, chestLabel, chestOwner, formatCount, pickTab, slotPosition, tileLabel } from './grid';
 import type { SlotRead } from '$lib/core/types';
 
 const slot = (over: Partial<SlotRead>): SlotRead => ({
@@ -56,6 +56,36 @@ describe('chestLabel', () => {
 	it('uses the name, or the number when never named', () => {
 		expect(chestLabel({ chest: 1, name: 'Treehouse' })).toBe('Treehouse');
 		expect(chestLabel({ chest: 2, name: null })).toBe('Chest 2');
+	});
+});
+
+describe('chestOwner', () => {
+	const bag = (...items: string[]) => ({
+		character: 'Alpha',
+		bank: null,
+		bag: {
+			captured_at: '2026-10-23T10:00:00',
+			previous_captured_at: null,
+			slot_count: items.length,
+			filled: items.length,
+			slots: items.map((item, i) => ({ slot: i + 1, item, item_type: 1, item_grade: 0, count: 1, change: null, delta: null }))
+		}
+	});
+	const chars = [bag("Adventurer's Chest", '30-Slot Shard Collector\'s Chest', 'Copper Ingot'), { character: 'Bravo', bag: null, bank: null }];
+
+	it("puts a chest under its saver when the saver's bag holds a chest item of that name", () => {
+		expect(chestOwner({ name: "Adventurer's", saved_by: 'Alpha' }, chars)).toBe('Alpha');
+		expect(chestOwner({ name: 'adventurers chest', saved_by: 'Alpha' }, chars)).toBe('Alpha');
+		expect(chestOwner({ name: '30-Slot Shard', saved_by: 'Alpha' }, chars)).toBe('Alpha');
+	});
+
+	it('leaves land chests, unnamed chests and other savers on the house side', () => {
+		expect(chestOwner({ name: 'Treehouse 1', saved_by: 'Alpha' }, chars)).toBeNull();
+		expect(chestOwner({ name: null, saved_by: 'Alpha' }, chars)).toBeNull();
+		expect(chestOwner({ name: 'Chest', saved_by: 'Alpha' }, chars)).toBeNull();
+		expect(chestOwner({ name: "Adventurer's", saved_by: 'Bravo' }, chars)).toBeNull();
+		expect(chestOwner({ name: "Adventurer's", saved_by: 'Nobody' }, chars)).toBeNull();
+		expect(chestOwner({ name: 'Adv', saved_by: 'Alpha' }, chars)).toBeNull();
 	});
 });
 

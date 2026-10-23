@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ArcheRage Market Tracker. The user exports AH data with the ArcheMarket game addon (a separate repo) as `listings.csv` and `market.csv`, and their bag and warehouse (`inventory.csv`) and house chests (`chests.csv`) with the ArcheBag addon, and uploads them by hand on `/import`. The app stores them idempotently and shows:
 - `/market`: a 14-day chart, the cheapest current offers, and a today-vs-7-days table;
-- `/items`: each character's bag and warehouse, and the house chests, as game-like tile grids.
+- `/items`: each character's bag, warehouse and bag chests, and the house chests, as game-like tile grids.
 
 Stack: FastAPI + SQLModel + PostgreSQL 16, SvelteKit 2 (Svelte 5 runes) + DaisyUI + ECharts, podman compose.
 
@@ -76,7 +76,7 @@ These invariants must hold:
 - `lib/market/` holds the API helpers, `chart.ts` (a pure ECharts option builder: two stacked panels sharing the date axis, no dual-axis), and the components.
 - Routes: `/` → `/market`, `/market` (selected item in `?item=`), `/items` (`?character=` and `?chest=`, `All` when missing; `/inventory` redirects here), `/import` (signed in), `/auth` (Google, plus the password form when `PUBLIC_PASSWORD_LOGIN=true`), `/auth/callback`.
 - CSP `connect-src` and `img-src` allow the origin of `PUBLIC_API_URL` (`svelte.config.js`), because dev and e2e call the API cross-origin and icons come from the API.
-- `lib/inventory/` holds the inventory API helpers, `grid.ts` (tiles, tabs, chest labels), `grades.ts` and the tile, grid and `GridPanel` components.
+- `lib/inventory/` holds the inventory API helpers, `grid.ts` (tiles, tabs, chest labels, `chestOwner`), `grades.ts` and the tile, grid and `GridPanel` components.
 
 **Frozen code.** `backend/frozen/` and `frontend/frozen/` (crafting, inventory, the old e2e spec) are reference-only, waiting for a rebuild. They are excluded from ruff, pytest, svelte-check, vitest and Docker. Don't import from them or fix them.
 
