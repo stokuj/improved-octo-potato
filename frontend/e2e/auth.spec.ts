@@ -31,6 +31,6 @@ test.describe('auth flow', () => {
     await authedPage.getByRole('button', { name: /sign out/i }).click();
     await authedPage.waitForURL((u) => u.pathname.startsWith('/auth'));
     await authedPage.goto('/import');
-    await expect(authedPage.locator('body')).toContainText('Only the admin can import files.');
+    await expect(authedPage.locator('body')).toContainText('Sign in to import files.');
   });
 });

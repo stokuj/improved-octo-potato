@@ -15,7 +15,7 @@ const config = {
 			mode: 'auto',
 			directives: {
 				'default-src': ['self'],
-				'img-src': ['self', 'data:'],
+				'img-src': ['self', 'data:', apiOrigin], // item icons come from the API
 				'script-src': ['self', 'strict-dynamic'],
 				'style-src': ['self', 'unsafe-inline'],
 				'connect-src': ['self', apiOrigin],

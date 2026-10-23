@@ -14,18 +14,26 @@ function asSuperuser() {
 }
 
 describe('import page', () => {
-	it('tells non-admins they cannot import', () => {
+	it('asks signed-out visitors to sign in', () => {
+		state.user = { data: null, isLoggedIn: false, loading: false };
+		render(Page);
+		expect(document.body.textContent).toContain('Sign in to import files.');
+		expect(document.querySelector('[data-testid="dropzone"]')).toBeNull();
+	});
+
+	it('lets any signed-in user drop files and says market files are admin only', () => {
 		state.user = { data: { id: 'u2', email: 'x@y.z', is_superuser: false }, isLoggedIn: true, loading: false };
 		render(Page);
-		expect(document.body.textContent).toContain('Only the admin can import files.');
-		expect(document.querySelector('[data-testid="dropzone"]')).toBeNull();
+		expect(document.querySelector('[data-testid="dropzone"]')).not.toBeNull();
+		expect(document.body.textContent).toContain('inventory.csv');
+		expect(document.body.textContent).toContain('admin only');
 	});
 
 	it('renders one result row per file and the capped error list', async () => {
 		asSuperuser();
 		const errors = Array.from({ length: 100 }, (_, i) => ({ line: i + 2, reason: 'bad row' }));
 		mockFetch({
-			'/market/import': {
+			'/import': {
 				json: async () => [
 					{ filename: 'market.csv', kind: 'market', rows: 406, inserted: 140, updated: 0, skipped: 266, error_count: 0, errors: [] },
 					{ filename: 'bad.csv', kind: 'listings', rows: 150, inserted: 0, updated: 0, skipped: 0, error_count: 150, errors }

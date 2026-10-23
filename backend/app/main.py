@@ -6,6 +6,8 @@ from slowapi.errors import RateLimitExceeded
 from app.admin.setup import setup_admin
 from app.auth.oauth import oauth_callback_error_handler
 from app.auth.router import router as auth_router
+from app.imports.router import router as imports_router
+from app.inventory.router import router as inventory_router
 from httpx_oauth.integrations.fastapi import OAuth2AuthorizeCallbackError
 from app.core.errors import register_exception_handlers
 from app.core.rate_limit import limiter
@@ -38,6 +40,8 @@ app.add_exception_handler(OAuth2AuthorizeCallbackError, oauth_callback_error_han
 api = APIRouter(prefix="/api")
 api.include_router(auth_router)
 api.include_router(market_router)
+api.include_router(imports_router)
+api.include_router(inventory_router)
 app.include_router(api)
 
 setup_admin(app)

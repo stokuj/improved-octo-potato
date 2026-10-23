@@ -7,14 +7,16 @@ Player's PC                                   Server
 ───────────                                   ──────
 ArcheRage + ArcheMarket addon                 Caddy (TLS, headers)
   └─ writes listings.csv, market.csv           ├─ /api/*   → FastAPI backend
-                                               ├─ /admin*  → FastAPI (sqladmin, IP allowlist)
-Browser                                        └─ /*       → SvelteKit (adapter-node)
-  └─ /import: drag & drop both CSVs ─────────► POST /api/market/import (superuser)
-  └─ /market: charts and tables  ◄──────────── GET  /api/market/*      (public)
-                                              PostgreSQL 16
+ArcheBag addon                                 ├─ /admin*  → FastAPI (sqladmin, IP allowlist)
+  └─ writes inventory.csv                      └─ /*       → SvelteKit (adapter-node)
+Browser
+  └─ /import: drag & drop CSVs ──────────────► POST /api/import  (signed in; market files admin only)
+  └─ /market: charts and tables  ◄──────────── GET  /api/market/*    (public)
+  └─ /inventory: bag grid        ◄──────────── GET  /api/inventory/* (own data; icons public)
+                                              PostgreSQL 16 · icon cache volume ◄── archeagecodex.com
 ```
 
-The addon is a separate repo (`ArcheMarket`); its CSV contract is described there (`llm-wiki/project/step7-design.md`, `step7b-design.md`). Nothing uploads automatically: the user uploads files by hand.
+Both addons live in a separate repo (`ArcheMarket`); their CSV contracts are described there (`llm-wiki/project/step7-design.md`, `step7b-design.md`, `step7c-design.md`). Nothing uploads automatically: the user uploads files by hand.
 
 ## Backend modules (`backend/app/`)
 
@@ -24,6 +26,8 @@ The addon is a separate repo (`ArcheMarket`); its CSV contract is described ther
 | `admin/` | sqladmin setup; its auth backend accepts the app's auth cookie for superusers only |
 | `auth/` | `User` model, fastapi-users wiring (cookie JWT), Google OAuth (`oauth.py`), password login outside prod, `/api/users/*`, `cli.py` (`create-superuser`) |
 | `market/` | `Item`, `MarketDay`, `Listing`; CSV parsing (`csv_format.py`), import and read services, `/api/market/*` |
+| `imports/` | `POST /api/import`: detects each file's kind by its exact header and hands it to `market` or `inventory`; `ImportFileResult` and `failed()` |
+| `inventory/` | `InventorySnapshot`, `InventorySlot`; `inventory.csv` parsing (`csv_format.py`), keep-two import, read API, Codex icon cache (`icons.py`), `/api/inventory/*` |
 
 Frozen reference code (not imported, routed, migrated or tested): `backend/frozen/{crafting,inventory}`, `frontend/frozen/{crafting,inventory,e2e}`.
 
@@ -37,11 +41,24 @@ market_day  PK (item_id → item.id, day date), daily_avg, weekly_avg, min, max,
             scan_id bigint, captured_at timestamp
 listing     PK (item_id → item.id, scan_id bigint, rank smallint), captured_at, status,
             unit_price bigint NULL, listing_price bigint NULL, stack int NULL
+inventory_snapshot  id PK, user_id → user.id (CASCADE), character varchar(64), snapshot_id bigint,
+                    captured_at, slot_count; UNIQUE (user_id, character, snapshot_id)
+inventory_slot      PK (snapshot → inventory_snapshot.id CASCADE, slot), item NULL, item_type NULL,
+                    item_grade NULL, count, icon NULL   (empty slots stored too)
 ```
 
-One Alembic baseline (`0001_baseline`). Copper is stored as integers (1 g = 10 000 c). `item_grade` is the raw game int (`ITEM_GRADE_TYPE`, 0 for most materials).
+Migrations: `0001_baseline`, `0002_inventory`. Copper is stored as integers (1 g = 10 000 c). `item_grade` is the raw game int (`ITEM_GRADE_TYPE`, 0 for most materials).
 
-## Import flow (`POST /api/market/import`)
+## Import flow (`POST /api/import`)
+
+`imports.services.import_file` reads the first line of each file:
+- the inventory header (with or without the trailing `icon` column) goes to `inventory`;
+- a market or listings header goes to `market`, but only for a superuser. Anyone else gets that file back with one error, `admin only`;
+- anything else goes to `market`, which answers `unknown header`.
+
+The caller's `id` and `is_superuser` are read once, before the loop. A file that fails rolls back the shared session and expires the `User`.
+
+### Market files
 
 1. Each uploaded file (50 MB cap, rate limit 10/min) is parsed by `csv_format.parse_csv`:
    - the type comes from the exact header row;
@@ -61,6 +78,32 @@ One Alembic baseline (`0001_baseline`). Copper is stored as integers (1 g = 10 0
 - **Newest scan wins** per (item, date). An older scan never overwrites a newer one.
 - **Sum rule:** per file, `inserted + updated + skipped + error_count == rows`. A whole-file failure (empty, not UTF-8, unknown header, too large, DB error) is one `errors` entry at line 0 with `error_count = rows`.
 - At most 100 errors are listed; `error_count` is the total.
+
+### Inventory files
+
+1. `inventory/csv_format.parse_inventory` groups lines by `(character, snapshot_id)`.
+   - Inside a group, each `slot == 1` starts a new run, and only the last run is kept. A same-second double click in game writes two runs; the earlier ones count as `skipped`.
+   - The kept run must have slots exactly `1..N` with N ≤ 300 and a single `captured_at`. Otherwise every line of it is an error.
+   - The `icon` column is reduced to its lowercase base name (`icon_item_0352`).
+2. For each `(user, character)`, the stored snapshots and the uploaded ones are ranked by `(captured_at, snapshot_id)` and only the **two newest** are kept.
+   - Older snapshots are deleted, and their slots cascade.
+   - A snapshot that is already stored, or that is too old to make the top two, is skipped.
+   - The same sum rule applies.
+
+## Inventory read API (`/api/inventory`, signed-in user's own data)
+
+| Endpoint | Returns |
+|---|---|
+| `GET /characters` | the user's characters with the newest and previous `captured_at`, `slot_count` and `filled` |
+| `GET /characters/{name}` | the newest snapshot's slots in order, each with `change` and `delta` |
+| `GET /icons/{name}.png` | a cached Codex icon; **public**, 404 when missing |
+
+- **Change flags.** `change` compares totals per `(item_type, item_grade)` against the previous snapshot: `new`, `up`, `down`, or null when there is no change or no previous snapshot. A moved stack is no change, and items that left the bag are not shown.
+- **Ownership.** Another user's character is 404.
+- **Icons.**
+  - A cache miss fetches `https://archeagecodex.com/items/{name}.png` once (5 s timeout) into `ICON_CACHE_DIR`.
+  - Codex answers unknown names with a generic 200 PNG. It is recognised by its SHA-256 and remembered as `{name}.missing`, so the tile shows its grade colour instead.
+  - At most 60 Codex fetches per minute per process; over that, the answer is 503. Cache hits are not limited.
 
 ## Read API (`/api/market`, public)
 
@@ -99,7 +142,13 @@ How `/summary` is computed. "Today" is the item's newest day:
 |---|---|
 | `lib/core/` | API base URL, auth state (Svelte 5 runes + context), `formatCurrency`, generated `api.d.ts` + `types.ts` |
 | `lib/market/` | API helpers, `chart.ts` (pure ECharts option builder), `MarketChart`, `ListingsTable`, `SummaryTable`, `ImportDropzone` |
-| `routes/` | `/` → `/market`, `/market`, `/import`, `/auth` (Google button; password form when `PUBLIC_PASSWORD_LOGIN=true`), `/auth/callback`, `/about` |
+| `lib/inventory/` | API helpers, `grid.ts` (slot position, tile label, change dot), `grades.ts` (grade names and pastel placeholder colours), `InventoryGrid`, `InventoryTile` |
+| `routes/` | `/` → `/market`, `/market`, `/inventory` (tab per character in `?character=`), `/import` (signed in), `/auth` (Google button; password form when `PUBLIC_PASSWORD_LOGIN=true`), `/auth/callback`, `/about` |
 
 - The chart is one ECharts instance with two stacked panels sharing the date axis: daily and 7-day average lines on top, volume bars below. It uses the SVG renderer.
-- CSP `connect-src` allows the origin of `PUBLIC_API_URL`, set in `svelte.config.js`.
+- CSP `connect-src` and `img-src` allow the origin of `PUBLIC_API_URL`, set in `svelte.config.js`. Icons are served by the API.
+- **The bag grid** is 10 columns, with slot 1 top-left.
+  - A tile shows the Codex icon. When there is no icon, or it fails to load, the tile is its grade's pastel colour.
+  - Empty slots have a dashed outline.
+  - The count sits bottom-right, and a change dot top-left.
+  - The tooltip and the `aria-label` carry the name, grade, count and delta.

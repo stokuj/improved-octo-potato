@@ -17,7 +17,7 @@ COPY alembic.ini ./alembic.ini
 ENV UV_CACHE_DIR=/app/.uv-cache \
     UV_PROJECT_ENVIRONMENT=/app/.venv
 RUN useradd --create-home --shell /bin/bash app \
- && mkdir -p /app/.uv-cache \
+ && mkdir -p /app/.uv-cache /app/icon-cache \
  && chown -R app:app /app
 USER app
 
