@@ -8,7 +8,7 @@ ArcheRage Market Tracker. The user exports AH data with the ArcheMarket game add
 
 Stack: FastAPI + SQLModel + PostgreSQL 16, SvelteKit 2 (Svelte 5 runes) + DaisyUI + ECharts, podman compose.
 
-Deeper docs: `docs/architecture.md` (schema, import flow, invariants), `docs/patterns.md` (conventions and gotchas), `docs/constitution.md` (rules), `docs/roadmap.md`.
+Deeper docs: `docs/architecture.md` (schema, import flow, invariants), `docs/patterns.md` (conventions and gotchas), `docs/constitution.md` (rules).
 
 ## Commands
 
@@ -87,7 +87,7 @@ These invariants must hold:
 - Login is rate-limited to 5/min per IP. Playwright logs in once (`e2e/auth.setup.ts` → storage state), and the rate-limit spec runs last in its own project. A quick local rerun can hit the limit.
 - Inventory tests use `backend/tests/inventory/fixtures/inventory.csv` and `chests.csv`. They are anonymised (`Alpha`, `Bravo`); never commit real character names (the ArcheMarket raw files contain one). Tests never call Codex: fake `icons.fetch_codex`, or route its HTTP through `fake_web` (an `httpx.MockTransport`) in `test_icons.py`. `ICON_CACHE_DIR` points to a temp dir.
 - Naive UTC datetimes in the DB. Money is integer copper (`bigint`), and `item_grade` is the raw game int.
-- Frontend stays on SvelteKit 2: SvelteKit 3 removes `$lib` and `svelte.config.js` (a roadmap item). Don't accept dependabot majors for kit, adapter-node or vitest without that migration.
+- Frontend stays on SvelteKit 2: SvelteKit 3 removes `$lib` and `svelte.config.js` (a planned migration). Don't accept dependabot majors for kit, adapter-node or vitest without that migration.
 - Schema change: write an Alembic migration (`alembic/script.py.mako` already imports `sqlmodel`); `alembic check` must pass.
 
 ## Rules
