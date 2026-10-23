@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { SlotRead } from '$lib/core/types';
 	import { iconUrl } from './api';
-	import { gradeColor } from './grades';
+	import { gradeColor, gradeFrame } from './grades';
 	import { changeDot, formatCount, slotPosition, tileLabel } from './grid';
 
 	let { slot }: { slot: SlotRead } = $props();
@@ -24,13 +24,15 @@
 		tabindex="0"
 		role="img"
 		aria-label={label}
-		class="relative aspect-square w-full rounded-md focus:outline-2 focus:outline-primary {slot.item == null
-			? 'border border-dashed border-base-content/20'
-			: 'ring-1 ring-black/15'}"
-		style={slot.item != null ? `background:${gradeColor(slot.item_grade)}` : ''}
+		class="relative aspect-square w-full focus:outline-2 focus:outline-primary {slot.item == null
+			? 'rounded-md border border-dashed border-base-content/20'
+			: 'border-2 ring-1 ring-black/60'}"
+		style={slot.item != null
+			? `background:${gradeColor(slot.item_grade)};border-image:${gradeFrame(slot.item_grade)} 1`
+			: ''}
 	>
 		{#if slot.item_type != null && !iconFailed}
-			<img src={iconUrl(slot.item_type)} alt="" class="size-full rounded-md" onerror={() => (iconFailed = true)} />
+			<img src={iconUrl(slot.item_type)} alt="" class="size-full" onerror={() => (iconFailed = true)} />
 		{/if}
 		{#if slot.count > 1}
 			<span class="absolute bottom-0 right-0.5 text-[10px] font-bold leading-tight text-white [text-shadow:0_0_2px_#000,0_0_2px_#000]">
