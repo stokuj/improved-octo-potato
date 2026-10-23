@@ -13,7 +13,7 @@
 
 **Tech Stack:** FastAPI, fastapi-users 15.0.5, httpx-oauth 0.17.x, sqladmin 0.27, SvelteKit 2.70 (Svelte 5), vitest, Playwright.
 
-**Spec:** `docs/ai/superpowers/specs/2026-10-21-google-login-design.md`
+**Spec:** `docs/superpowers/specs/2026-10-21-google-login-design.md`
 
 ## Global Constraints
 
@@ -371,7 +371,7 @@
 **Files:**
 - Modify: `infra/.env.example` and the `infra/compose/docker-compose.{dev,e2e,prod}.yml` files.
 - Modify: `infra/caddy/Caddyfile` and `infra/tests/test_caddy_headers.sh`.
-- Modify: `README.md`, `CLAUDE.md`, `docs/ai/architecture.md`, `docs/ai/constitution.md`, `docs/ai/roadmap.md` and `docs/ai/progress.md`.
+- Modify: `README.md`, `CLAUDE.md`, `docs/architecture.md`, `docs/constitution.md`, `docs/roadmap.md` and `docs/progress.md`.
 
 - [ ] **Step 1: Write the failing infra check**
 
