@@ -58,4 +58,7 @@ async def test_failing_app_still_logs_500_and_resets_id(caplog):
     [rec] = _requests(caplog)
     assert rec.fields["status"] == 500
     assert rec.request_id == "id-x"
+    # The traceback is logged while the id is still set, so it can be found by id.
+    [failed] = [r for r in caplog.records if r.getMessage() == "http.failed"]
+    assert failed.exc_info and failed.request_id == "id-x"
     assert request_id.get() == "-"

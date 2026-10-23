@@ -69,7 +69,7 @@ def configure_logging(level: str = "INFO") -> None:
     handler.setFormatter(JsonFormatter())
     handler._app_json = True
     root.addHandler(handler)
-    root.setLevel(level)
+    root.setLevel(level.upper())
     for name in ("uvicorn", "uvicorn.error"):
         logger = logging.getLogger(name)
         logger.handlers = []
@@ -110,6 +110,12 @@ class RequestIdMiddleware:
 
         try:
             await self.app(scope, receive, send_with_id)
+        except Exception:
+            # Uvicorn logs the traceback only after the id is reset; log it here with the id.
+            _http_log.exception(
+                "http.failed", method=scope["method"], path=scope["path"]
+            )
+            raise
         finally:
             ms = round((time.perf_counter() - started) * 1000, 1)
             # Path only: a query string can carry an OAuth code.

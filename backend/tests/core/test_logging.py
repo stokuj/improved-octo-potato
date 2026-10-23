@@ -78,3 +78,9 @@ def test_configure_logging_is_idempotent_and_keeps_other_handlers(caplog):
     assert access.handlers == [] and not access.propagate
     error = logging.getLogger("uvicorn.error")
     assert error.handlers == [] and error.propagate
+
+
+def test_lowercase_level_is_accepted():
+    configure_logging("debug")
+    assert logging.getLogger().level == logging.DEBUG
+    configure_logging("INFO")
