@@ -43,7 +43,7 @@
 		const q = new URLSearchParams(page.url.searchParams);
 		if (value === ALL) q.delete(param);
 		else q.set(param, value);
-		goto(`?${q}`, { replaceState: true, keepFocus: true, noScroll: true });
+		goto(q.size ? `?${q}` : page.url.pathname, { replaceState: true, keepFocus: true, noScroll: true });
 	}
 </script>
 
@@ -70,9 +70,10 @@
 	{#if error}
 		<div role="alert" class="alert alert-error text-sm">{error}</div>
 	{:else if loaded}
-		<!-- Wide screens: two equal halves, each with two grids per row (20 columns a side). -->
-		<div class="flex flex-col gap-6 lg:flex-row lg:items-start">
-			<section aria-label="Characters" class="min-w-0 space-y-4 lg:flex-1 lg:basis-0">
+		<!-- From xl (1280px): two equal halves, two grids per row each (20 columns a side); narrower stacks. -->
+		<div class="flex flex-col gap-6 xl:flex-row xl:items-start">
+			<section aria-label="Characters" class="min-w-0 space-y-4 xl:flex-1 xl:basis-0">
+				<h2 class="text-xs font-semibold uppercase tracking-wide opacity-60">Characters</h2>
 				{#if characters.length}
 					{@render tabs(
 						'character',
@@ -81,7 +82,7 @@
 					)}
 					{#each shownCharacters as c (c.character)}
 						<div class="space-y-2">
-							{#if character === ALL}<h2 class="font-bold">{c.character}</h2>{/if}
+							{#if character === ALL}<h3 class="font-bold">{c.character}</h3>{/if}
 							<div class="grid items-start gap-3 sm:grid-cols-2">
 								{#if c.bag}<GridPanel title="Bag" grid={c.bag} />{/if}
 								{#if c.bank}<GridPanel title="Warehouse" grid={c.bank} />{/if}
@@ -98,7 +99,7 @@
 
 			<section
 				aria-label="House chests"
-				class="min-w-0 space-y-4 lg:flex-1 lg:basis-0 lg:border-l lg:border-base-content/10 lg:pl-6"
+				class="min-w-0 space-y-4 xl:flex-1 xl:basis-0 xl:border-l xl:border-base-content/10 xl:pl-6"
 			>
 				<h2 class="text-xs font-semibold uppercase tracking-wide opacity-60">House chests</h2>
 				{#if chests.length}

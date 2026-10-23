@@ -42,6 +42,8 @@ Mockups: `.superpowers/brainstorm/183378-1792762547/content/items-v4-e1-all.html
 - Every grid uses the existing 10-column (the in-game chest window is 10 wide too, screenshot `farmers-large-chest.png`) `InventoryGrid` and `InventoryTile` unchanged: icon over grade colour, count, tooltip, change dot, dashed empty slots.
 - The empty state (no data at all) names both files and both in-game buttons (`Bag`, `Chest`).
 
+**Changed after the first build (user, 2026-10-23):** from 1280px wide, each side shows two grids per row (bag and warehouse on the left, two chests on the right), 20 columns a side; tiles are fluid instead of a fixed 36px, and counts from 10 000 read as `10k`. Narrower screens stack the two sides.
+
 ## Data contracts (ArcheBag step 7d, `ArcheMarket/llm-wiki/project/step7d-design.md`)
 
 `inventory.csv`, exact header:

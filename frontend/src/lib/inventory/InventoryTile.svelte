@@ -9,8 +9,9 @@
 	let iconFailed = $state(false);
 	const label = $derived(tileLabel(slot));
 	const dot = $derived(changeDot(slot.change));
-	// Tips of the right half open to the left, so a grid at the page edge adds no horizontal scroll.
-	const tipSide = $derived(slotPosition(slot.slot).col > 5 ? 'tooltip-left' : '');
+	// Edge columns open inwards so a tip stays on screen in any grid; the middle opens upwards.
+	const col = $derived(slotPosition(slot.slot).col);
+	const tipSide = $derived(col <= 3 ? 'tooltip-right' : col >= 8 ? 'tooltip-left' : '');
 	const DOT = { up: 'bg-green-500', down: 'bg-red-500', new: 'bg-blue-500' } as const;
 </script>
 

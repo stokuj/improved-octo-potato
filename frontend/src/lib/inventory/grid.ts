@@ -23,7 +23,7 @@ export function changeDot(change: SlotRead['change']): 'up' | 'down' | 'new' | n
 // The All tab's value; '' can't be a character name or a chest number, unlike 'All'.
 export const ALL = '';
 
-/** A stack count short enough for a ~28px tile; the tooltip keeps the exact number. */
+/** A stack count short enough for a ~28px tile (20 columns a side at 1280px); the tooltip keeps the exact number. */
 export function formatCount(n: number): string {
 	return n >= 10000 ? `${Math.floor(n / 1000)}k` : String(n);
 }

@@ -77,7 +77,8 @@
 	</header>
 
 	<!-- Main Content -->
-	<main class="container mx-auto my-6 p-4 sm:p-6 flex-1 bg-base-100 rounded-box shadow-lg">
+	<!-- overflow-x-clip: hidden tooltips are still laid out and must not widen the page. -->
+	<main class="container mx-auto my-6 p-4 sm:p-6 flex-1 overflow-x-clip bg-base-100 rounded-box shadow-lg">
 		{#if user.loading && !user.isLoggedIn}
 			<div class="flex justify-center items-center h-64">
 				<span class="loading loading-ring loading-lg text-primary"></span>
