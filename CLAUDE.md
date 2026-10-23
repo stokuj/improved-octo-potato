@@ -78,7 +78,7 @@ These invariants must hold:
 - CSP `connect-src` and `img-src` allow the origin of `PUBLIC_API_URL` (`svelte.config.js`), because dev and e2e call the API cross-origin and icons come from the API.
 - `lib/inventory/` holds the inventory API helpers, `grid.ts` (tiles, tabs, chest labels, `chestOwner`), `grades.ts` and the tile, grid and `GridPanel` components.
 
-**Frozen code.** `backend/frozen/` and `frontend/frozen/` (crafting, inventory, the old e2e spec) are reference-only, waiting for a rebuild. They are excluded from ruff, pytest, svelte-check, vitest and Docker. Don't import from them or fix them.
+**Frozen code.** `backend/frozen/` and `frontend/frozen/` (crafting) are reference-only, waiting for a rebuild. They are excluded from ruff, pytest, svelte-check, vitest and Docker. Don't import from them or fix them.
 
 ## Gotchas
 

@@ -29,7 +29,7 @@ Both addons live in a separate repo (`ArcheMarket`); their CSV contracts are des
 | `imports/` | `POST /api/import`: detects each file's kind by its exact header and hands it to `market` or `inventory`; `ImportFileResult` and `failed()` |
 | `inventory/` | `InventorySnapshot`, `InventorySlot`, `ChestName`; `inventory.csv` and `chests.csv` parsing (`csv_format.py`), keep-two import per place, read API, Codex icon cache (`icons.py`), `/api/inventory/*` |
 
-Frozen reference code (not imported, routed, migrated or tested): `backend/frozen/{crafting,inventory}`, `frontend/frozen/{crafting,inventory,e2e}`.
+Frozen reference code (not imported, routed, migrated or tested): `backend/frozen/crafting` (with its tests in `backend/frozen/tests`) and `frontend/frozen/crafting`.
 
 ## Database schema
 
