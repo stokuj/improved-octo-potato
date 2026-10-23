@@ -103,6 +103,7 @@ A real two-character sample lives in the ArcheMarket repo at `llm-wiki/sources/r
   - Lines are grouped by `(character, snapshot_id)`.
   - A snapshot is **valid** only if its slots are exactly `1..N` with no gap or duplicate, all lines carry the same `captured_at`, and N ≤ 300. **My call:** an upper bound against garbage.
   - Every line of an invalid snapshot becomes an error, because a partial bag would draw wrong.
+  - **Same-second double click.** Two clicks in one second share a `snapshot_id`, so a group can hold two full runs `1..N,1..N`. Each `slot == 1` starts a new run and the **last run** is kept; the earlier runs' lines count as skipped. **My call**, made while writing the plan. Without it, a double click would reject the whole snapshot as "duplicate slot".
 - **Storing.** For each `(user, character)`, the uploaded valid snapshots and the stored ones are merged, and only the **two with the newest `captured_at`** are kept, older ones deleted. The ordering tie-break is `snapshot_id`.
   - A snapshot already stored is a no-op, so re-upload changes nothing. One that is too old to make the top two is skipped.
   - Accounting: for each file, `rows` counts its data lines.
