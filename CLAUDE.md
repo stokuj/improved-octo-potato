@@ -82,6 +82,8 @@ These invariants must hold:
 
 ## Gotchas
 
+More, rarer ones in `docs/gotchas.md`.
+
 - Tests hit a real Postgres that is **not cleaned between tests**: use unique names and `item_type` values (see `rewrite_fixture` in `tests/market/test_import.py`). Create users with the `make_user` + `login` fixtures, and use `superuser_client` for admin calls. Test emails must use a real TLD like `@example.com`; `EmailStr` rejects `.local`.
 - e2e and local dev use the password form (`PUBLIC_PASSWORD_LOGIN=true`, read from `$env/dynamic/public`); no test talks to Google. Backend OAuth tests fake `google_client.get_access_token`/`get_profile`.
 - Login is rate-limited to 5/min per IP. Playwright logs in once (`e2e/auth.setup.ts` → storage state), and the rate-limit spec runs last in its own project. A quick local rerun can hit the limit.
