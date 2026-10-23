@@ -8,7 +8,7 @@ ArcheRage Market Tracker. The user exports AH data with the ArcheMarket game add
 
 Stack: FastAPI + SQLModel + PostgreSQL 16, SvelteKit 2 (Svelte 5 runes) + DaisyUI + ECharts, podman compose.
 
-Deeper docs: `docs/architecture.md` (schema, import flow, invariants), `docs/patterns.md` (conventions and gotchas), `docs/constitution.md` (rules).
+Deeper docs: `docs/CONTEXT.md` (domain glossary), `docs/architecture.md` (schema, import flow, invariants), `docs/patterns.md` (conventions and gotchas), `docs/constitution.md` (rules).
 
 ## Commands
 
