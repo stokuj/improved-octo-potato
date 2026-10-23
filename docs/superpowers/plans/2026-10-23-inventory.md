@@ -11,7 +11,7 @@
 
 **Tech Stack:** FastAPI, SQLModel + Alembic, PostgreSQL 16, httpx (already installed via httpx-oauth), SvelteKit 2 (Svelte 5 runes), DaisyUI, vitest, Playwright.
 
-**Spec:** `docs/ai/superpowers/specs/2026-10-23-inventory-design.md`
+**Spec:** `docs/superpowers/specs/2026-10-23-inventory-design.md`
 
 ## Global Constraints
 
@@ -465,14 +465,14 @@
   - `frontend/e2e/fixtures/inventory.csv`: a small anonymised file, 2 characters × 20 slots, a few items, made-up names `Alpha` and `Bravo`.
   - `frontend/e2e/inventory.spec.ts`.
 - Modify:
-  - `docs/ai/architecture.md`: the imports and inventory modules, tables, endpoints and icon cache.
-  - `docs/ai/constitution.md`:
+  - `docs/architecture.md`: the imports and inventory modules, tables, endpoints and icon cache.
+  - `docs/constitution.md`:
     - "Inventory data is per user; every query filters by the signed-in user."
     - "No real character names in fixtures."
     - "Game icons are never committed."
   - `CLAUDE.md`: modules list, `/inventory` and `/import` routes, the `icon_cache` volume.
-  - `docs/ai/roadmap.md`: Done row, plus the Planned rows "Warehouse and house chests", "ArcheBag `icon` column" and "Player registration".
-  - `docs/ai/progress.md`.
+  - `docs/roadmap.md`: Done row, plus the Planned rows "Warehouse and house chests", "ArcheBag `icon` column" and "Player registration".
+  - `docs/progress.md`.
   - `README.md`: the Importing section mentions `inventory.csv` from `Documents/Addon/archebag/`.
 
 - [ ] **Step 1: Write the e2e spec**

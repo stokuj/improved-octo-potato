@@ -1,7 +1,7 @@
 # Design: ArcheMarket CSV as the price source
 
 Date: 2026-10-21. Status: draft, waiting for the user's approval. Two independent reviews (Fable and Opus) have been folded in.
-Background reading: [`docs/ai/view.md`](../../view.md), the stage 1 review of the current code. Its recommendations were accepted, and this document overrides it wherever the two differ.
+Background reading: [`docs/view.md`](../../view.md), the stage 1 review of the current code. Its recommendations were accepted, and this document overrides it wherever the two differ.
 Data contract: the ArcheMarket repo (`/home/kstasica/projects/ArcheMarket/llm-wiki`), mainly `project/step7-design.md`, `project/step7b-design.md`, `open-questions.md` #10–11, the sample files in `sources/raw/ingame/2026-10-21-step7b/`, and `addon/archemarket/main.lua`.
 
 ## 1. Intent
@@ -65,7 +65,7 @@ frontend/frozen/  crafting/  inventory/                 (RecipeCard, RecipeTree,
   So none of it is mounted, has tables, gets type-checked or is reachable by URL.
 - Ruff excludes `backend/frozen/`. It still imports names that no longer exist, such as `ItemCategory` and `current_price`.
 - The e2e spec `crafting-inventory.spec.ts` moves to `frontend/frozen/e2e/`.
-- `docs/ai/roadmap.md` gets an entry: "Rebuild crafting and inventory on the new item and price model (reference: `backend/frozen`, `frontend/frozen`)".
+- `docs/roadmap.md` gets an entry: "Rebuild crafting and inventory on the new item and price model (reference: `backend/frozen`, `frontend/frozen`)".
 
 ### 2.3 Move and restructure
 
@@ -118,7 +118,7 @@ frontend/frozen/       see §2.2
   - `infra/.env.example` is the only env template.
   - The Makefile passes `--env-file $(ROOT_DIR)infra/.env` to compose **only when that file exists**, so a fresh clone still starts on the defaults.
   - Frontend CI no longer copies `frontend/.env.example`; it writes the one variable it needs.
-- **Docs:** everything lives under `docs/ai/`, with `docs/superpowers/` merged in.
+- **Docs:** everything lives under `docs/`, with `docs/superpowers/` merged in.
 - **`CLAUDE.md`** is restored and rewritten for the new layout and rules.
 
 ### 2.4 New data model
@@ -264,7 +264,7 @@ Reading these endpoints needs no login.
 
 ### 2.9 Docs
 
-- Rewrite `docs/ai/architecture.md`, `stack.md`, `patterns.md`, `constitution.md` and `roadmap.md` to match the new code, fixing every mismatch listed in `view.md` §2.3. `progress.md` gets a new entry.
+- Rewrite `docs/architecture.md`, `stack.md`, `patterns.md`, `constitution.md` and `roadmap.md` to match the new code, fixing every mismatch listed in `view.md` §2.3. `progress.md` gets a new entry.
 - Document the CSV import, how to reset the DB, and how to create the superuser.
 - `view.md` stays as the historical review.
 
@@ -331,7 +331,7 @@ Reading these endpoints needs no login.
   - A test must cover a scan at 21:30 UTC landing on the next Moscow date.
 - **Q6. Graded items.** The user will track different kinds of items: **materials first, graded gear later**. This round supports single-grade items only.
   - A graded item that shows up early is not misfiled silently. A market row whose name belongs to an item with a different non-null `(item_type, item_grade)` becomes a row error (§2.5, the collision rule), with the reason "name already used by another grade".
-  - `docs/ai/roadmap.md` gets an entry: "Graded items: needs ArcheMarket to write `item_type`/`item_grade` in `listings.csv`, then key items on `(item_type, item_grade)` only".
+  - `docs/roadmap.md` gets an entry: "Graded items: needs ArcheMarket to write `item_type`/`item_grade` in `listings.csv`, then key items on `(item_type, item_grade)` only".
 
 ## 9. Left to the builder
 

@@ -125,4 +125,4 @@ Success: in production the only way in is "Sign in with Google" with the owner's
 - Exact file split inside `app/auth/` (e.g. `oauth.py` for the client, with a one-line reason comment, per the module rules).
 - Error copy on `/auth/callback`.
 - Whether the Google button shows when the Google router is not mounted (dev without credentials). A 404 from authorize can just show an error.
-- Updating `docs/ai/architecture.md`, `constitution.md` (the "accounts only from CLI" rule stays, and prod gets "no password login") and `CLAUDE.md`.
+- Updating `docs/architecture.md`, `constitution.md` (the "accounts only from CLI" rule stays, and prod gets "no password login") and `CLAUDE.md`.

@@ -11,7 +11,7 @@
 
 **Tech Stack:** Python 3.13, FastAPI, SQLModel, Alembic, asyncpg, fastapi-users, slowapi, pytest; SvelteKit 5, TypeScript, Tailwind 4, DaisyUI 5, ECharts 6, vitest, Playwright; podman compose (local), docker compose (CI), Caddy.
 
-**Spec:** `docs/ai/superpowers/specs/2026-10-21-archemarket-csv-design.md` (approved 2026-10-21). Read it together with this plan. Background: `docs/ai/view.md`.
+**Spec:** `docs/superpowers/specs/2026-10-21-archemarket-csv-design.md` (approved 2026-10-21). Read it together with this plan. Background: `docs/view.md`.
 
 ## Global Constraints
 
@@ -67,7 +67,7 @@ The list is the union of spec §2.1 and the files this plan deletes:
 - **Task 5:** `backend/app/items/`.
 - **Task 10:** `frontend/src/routes/{items,saved-items,settings}/**`, `frontend/src/lib/components/ItemTable.*`, `frontend/src/lib/components/charts/**`, `frontend/src/test/routes/{items,items-detail,saved-items,settings}.page.test.ts`, `frontend/src/routes/+page.svelte`, `frontend/src/lib/grades.ts`.
 - **Task 13:** `e2e/fixtures.sql`, `e2e/seed.ts`, `e2e/items.spec.ts`, `e2e/saved-items.spec.ts`.
-- **Task 15:** `docs/ai/superpowers/{plans,specs}/2026-05-1{6,7}-{ingest,discord-bot,pricetracker-folio}*`.
+- **Task 15:** `docs/superpowers/{plans,specs}/2026-05-1{6,7}-{ingest,discord-bot,pricetracker-folio}*`.
 
 Ask separately about `.claude/settings.json` (deleted in the working tree): keep it deleted, or restore it? Do not continue until the user answers.
 
@@ -103,7 +103,7 @@ git add -A && git commit -m "chore: remove discord bot and legacy addons, single
 - Modify: `backend/app/main.py` (routers), `backend/app/admin.py` (views), `backend/app/auth/manager.py` (drop the profile hooks), `backend/app/config/settings.py:205,212,232,248` (drop `ingest_token`), `backend/alembic/env.py:9-16`, `backend/tests/conftest.py`, `backend/tests/test_settings_validator.py:57`, `backend/pyproject.toml` (ruff exclude), `infra/compose/docker-compose.prod.yml:35`, `infra/.env.example` (drop `INGEST_TOKEN`)
 
 `FROZEN.md` text (the same in both folders, with the module name swapped):
-> Frozen on 2026-10-21. Kept only as a reference for the rebuild on the new item/price model (see `docs/ai/roadmap.md`). Not imported, routed, migrated, linted or tested.
+> Frozen on 2026-10-21. Kept only as a reference for the rebuild on the new item/price model (see `docs/roadmap.md`). Not imported, routed, migrated, linted or tested.
 
 - [ ] **Step 1: Delete the modules and move the frozen code and tests**
 
@@ -759,8 +759,8 @@ Expected: no `BAD` and no `FAIL`. CI itself runs only after the user pushes; tha
 ### Task 15: Docs and agent rules
 
 **Files:**
-- Modify: `docs/ai/{architecture,stack,patterns,constitution,roadmap,progress}.md`, `CLAUDE.md`, `README.md`
-- Move: `docs/superpowers/{plans,specs}/*` to `docs/ai/superpowers/{plans,specs}/`, then delete the empty `docs/superpowers/`
+- Modify: `docs/{architecture,stack,patterns,constitution,roadmap,progress}.md`, `CLAUDE.md`, `README.md`
+- Move: `docs/superpowers/{plans,specs}/*` to `docs/superpowers/{plans,specs}/`, then delete the empty `docs/superpowers/`
 - Delete: the Task 15 entries in Task 1 Step 2
 
 Content each doc must have:
@@ -795,7 +795,7 @@ Content each doc must have:
 - [ ] **Step 1: Write the docs**
 - [ ] **Step 2: Verify**
 
-Run: `git grep -n -i "discord\|ingest\|watcher\|pricetracker\|source='ah'\|auth.svelte.js\|current_active_user" -- docs/ai/*.md CLAUDE.md README.md || echo CLEAN`
+Run: `git grep -n -i "discord\|ingest\|watcher\|pricetracker\|source='ah'\|auth.svelte.js\|current_active_user" -- docs/*.md CLAUDE.md README.md || echo CLEAN`
 Expected: `CLEAN`. `view.md` is excluded, because it is the historical review.
 - [ ] **Step 3: Final full check**
 

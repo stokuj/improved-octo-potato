@@ -217,4 +217,4 @@ A real two-character sample lives in the ArcheMarket repo at `llm-wiki/sources/r
 - Where the shared import router lives (`core` or a tiny `imports` module) and how it hands off to services.
 - The tooltip component (DaisyUI `tooltip` or a small custom one) and the exact tile size. About 34–40 px fits 10 columns on a phone with the 16 px gutter.
 - The icon cache file layout and how a Codex 404 is remembered (a marker file is fine).
-- Updating `docs/ai/architecture.md`, `constitution.md` (per-user data rule, no real names in fixtures), `CLAUDE.md` and the roadmap.
+- Updating `docs/architecture.md`, `constitution.md` (per-user data rule, no real names in fixtures), `CLAUDE.md` and the roadmap.

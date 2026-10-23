@@ -3013,7 +3013,7 @@ Expected: 20 passed.
 
 - [ ] **Step 4.4: Update roadmap**
 
-Edit `docs/ai/roadmap.md` — move "Rate limit testy" and "/users/{id} testy" out of "Planowane" into "Zrealizowane":
+Edit `docs/roadmap.md` — move "Rate limit testy" and "/users/{id} testy" out of "Planowane" into "Zrealizowane":
 
 | Ficzer | Opis |
 |---|---|
@@ -3022,7 +3022,7 @@ Edit `docs/ai/roadmap.md` — move "Rate limit testy" and "/users/{id} testy" ou
 - [ ] **Step 4.5: Commit roadmap update**
 
 ```bash
-git add docs/ai/roadmap.md
+git add docs/roadmap.md
 git commit -m "docs(roadmap): mark test suite expansion as completed"
 ```
 

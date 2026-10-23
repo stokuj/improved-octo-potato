@@ -45,4 +45,4 @@ In dev the password form is shown because compose sets `PUBLIC_PASSWORD_LOGIN=tr
 
 ## More
 
-`make help` lists all commands. Architecture and rules live in `docs/ai/`.
+`make help` lists all commands. Rules and architecture are in `CLAUDE.md`, the domain glossary in `docs/CONTEXT.md`.

@@ -14,7 +14,7 @@ Wypełniamy luki w piramidzie testów ArcheRage Market Tracker:
 2. **Frontend** ma testy jednostkowe tylko dla 3 modułów (`auth`, `crafting`, `currency`) — komponenty Svelte 5 i route `+page.svelte` nie są w ogóle dotknięte.
 3. **E2E nie istnieje** — żaden user journey nie jest weryfikowany end-to-end przez prawdziwy stack.
 
-Zasady projektowe (z `docs/ai/patterns.md` i `CLAUDE.md`):
+Zasady projektowe (z `docs/patterns.md` i `CLAUDE.md`):
 
 - **Bez mocków DB w backendzie.** Wszystkie testy biją w PostgreSQL `app_test` (historia: mocki ukryły błąd migracji).
 - **UUID-suffix** w nazwach itemów i e-mailach — DB nie jest czyszczona między testami.
@@ -142,7 +142,7 @@ Istniejący `test_inventory.py` (17 testów) skupia się na happy path. Dokłada
 | 1 | `test_recipe_depth_3_levels_profit_correct` | A wymaga B, B wymaga C, C to leaf | profit obliczony rekurencyjnie poprawnie |
 | 2 | `test_recipe_cycle_does_not_infinite_loop` | A → B → A (utworzone przez `item_with_broken_recipe`-style FK bypass) | calculator zwraca błąd / sentinel, NIE wisi |
 | 3 | `test_missing_ingredient_recipe_returns_partial_cost` | recipe odwołuje się do nieistniejącego ingredient_item_id (fixture `item_with_broken_recipe`) | `total_material_cost` = NULL / sentinel, profit oznaczony jako niekompletny |
-| 4 | `test_batch_profit_formula_with_multiplier` | recipe z `output_qty=5`, multiplier=2 | `batch_profit = (market_price * 5 * 2) − total_material_cost` — regression dla critical invariantu z `docs/ai/architecture.md` |
+| 4 | `test_batch_profit_formula_with_multiplier` | recipe z `output_qty=5`, multiplier=2 | `batch_profit = (market_price * 5 * 2) − total_material_cost` — regression dla critical invariantu z `docs/architecture.md` |
 
 **Edge cases:**
 - Cykl recipe to teoretycznie niemożliwy w UI, ale FK bypass w testach jest realny — recursion guard MUST być w kodzie produkcyjnym (jeśli nie jest, test 2 fail-uje i ujawnia braki).

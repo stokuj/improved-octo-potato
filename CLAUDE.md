@@ -8,7 +8,7 @@ ArcheRage Market Tracker. The user exports AH data with the ArcheMarket game add
 
 Stack: FastAPI + SQLModel + PostgreSQL 16, SvelteKit 2 (Svelte 5 runes) + DaisyUI + ECharts, podman compose.
 
-Deeper docs: `docs/ai/architecture.md` (schema, import flow, invariants), `docs/ai/patterns.md` (conventions and gotchas), `docs/ai/constitution.md` (rules), `docs/ai/roadmap.md`.
+Deeper docs: `docs/CONTEXT.md` (domain glossary), `docs/gotchas.md`, `docs/superpowers/` (specs and plans).
 
 ## Commands
 
@@ -78,16 +78,18 @@ These invariants must hold:
 - CSP `connect-src` and `img-src` allow the origin of `PUBLIC_API_URL` (`svelte.config.js`), because dev and e2e call the API cross-origin and icons come from the API.
 - `lib/inventory/` holds the inventory API helpers, `grid.ts` (tiles, tabs, chest labels, `chestOwner`), `grades.ts` and the tile, grid and `GridPanel` components.
 
-**Frozen code.** `backend/frozen/` and `frontend/frozen/` (crafting, inventory, the old e2e spec) are reference-only, waiting for a rebuild. They are excluded from ruff, pytest, svelte-check, vitest and Docker. Don't import from them or fix them.
+**Frozen code.** `backend/frozen/` and `frontend/frozen/` (crafting) are reference-only, waiting for a rebuild. They are excluded from ruff, pytest, svelte-check, vitest and Docker. Don't import from them or fix them.
 
 ## Gotchas
+
+More, rarer ones in `docs/gotchas.md`.
 
 - Tests hit a real Postgres that is **not cleaned between tests**: use unique names and `item_type` values (see `rewrite_fixture` in `tests/market/test_import.py`). Create users with the `make_user` + `login` fixtures, and use `superuser_client` for admin calls. Test emails must use a real TLD like `@example.com`; `EmailStr` rejects `.local`.
 - e2e and local dev use the password form (`PUBLIC_PASSWORD_LOGIN=true`, read from `$env/dynamic/public`); no test talks to Google. Backend OAuth tests fake `google_client.get_access_token`/`get_profile`.
 - Login is rate-limited to 5/min per IP. Playwright logs in once (`e2e/auth.setup.ts` → storage state), and the rate-limit spec runs last in its own project. A quick local rerun can hit the limit.
 - Inventory tests use `backend/tests/inventory/fixtures/inventory.csv` and `chests.csv`. They are anonymised (`Alpha`, `Bravo`); never commit real character names (the ArcheMarket raw files contain one). Tests never call Codex: fake `icons.fetch_codex`, or route its HTTP through `fake_web` (an `httpx.MockTransport`) in `test_icons.py`. `ICON_CACHE_DIR` points to a temp dir.
 - Naive UTC datetimes in the DB. Money is integer copper (`bigint`), and `item_grade` is the raw game int.
-- Frontend stays on SvelteKit 2: SvelteKit 3 removes `$lib` and `svelte.config.js` (a roadmap item). Don't accept dependabot majors for kit, adapter-node or vitest without that migration.
+- Frontend stays on SvelteKit 2: SvelteKit 3 removes `$lib` and `svelte.config.js` (a planned migration). Don't accept dependabot majors for kit, adapter-node or vitest without that migration.
 - Schema change: write an Alembic migration (`alembic/script.py.mako` already imports `sqlmodel`); `alembic check` must pass.
 
 ## Rules
@@ -95,3 +97,7 @@ These invariants must hold:
 - Never push, merge, or commit to `main` without an explicit request. Commit format: `type(scope): description`.
 - Never modify `.env*` files. `infra/.env.example` is the only template.
 - Code comments, docs and PR text are in English; talk to the user in their language.
+- Non-trivial change: design, then plan, then implementation, with the user's approval in between.
+- Tests mirror the code layout: `backend/tests/<module>/` for `backend/app/<module>/`; frontend unit tests sit next to the code (`*.test.ts`), route tests in `src/test/routes/`, mocks aliased in `vitest.config.ts`.
+- Import `formatCurrency` from `$lib/core/currency`; never redefine it. Every fetch uses `credentials: 'include'`.
+- Game icons are never committed; they live in the icon cache volume.
