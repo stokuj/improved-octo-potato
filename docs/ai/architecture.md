@@ -105,8 +105,8 @@ The caller's `id` and `is_superuser` are read once, before the loop. A file that
 - **Change flags.** `change` compares totals per `(item_type, item_grade)` against the place's previous snapshot: `new`, `up`, `down`, or null when there is no change or no previous snapshot. A moved stack is no change, and items that left the bag are not shown.
 - **Ownership.** Every query is scoped to the signed-in user; others' data never appears.
 - **Icons.**
-  - The game gives no icon path for bag items, so icons are looked up by `item_type`. A cache miss fetches the Codex item page `https://archeagecodex.com/us/item/{item_type}/`, takes the first image in its `item-icon` cell (`items/…png`, sometimes in a subfolder), then fetches that PNG (5 s timeout) into `ICON_CACHE_DIR/{item_type}.png`.
-  - Codex answers an unknown id with a 200 `ERROR!` page, and an unknown PNG with a generic image recognised by its SHA-256. Both are remembered as `{item_type}.missing`, so the tile shows its grade colour.
+  - The game gives no icon path for bag items, so icons are looked up by `item_type`. A cache miss fetches the Codex item page `https://archeagecodex.com/us/item/{item_type}/`, takes the first image in its `item-icon` cell (`items/…png`, sometimes in a subfolder; a Windows `\` separator in the path is read as `/`), then fetches that PNG (5 s timeout) into `ICON_CACHE_DIR/{item_type}.png`.
+  - Codex answers an unknown id with a 200 `ERROR!` page, and an unknown PNG with a generic image recognised by its SHA-256. Both are remembered as `{item_type}.missing`, and so is an icon cell whose path is not a Codex `items/…png`; the tile shows its grade colour.
   - A page without the icon cell (Codex changed its HTML), a non-200 or a network error is not cached and is retried on the next request.
   - Codex drops about 1 in 7 TCP connects, so each fetch retries connects twice (2 s connect timeout), and at most 4 fetches run in parallel.
   - ArcheRage's own items (ids 8 000 000 and up) are not on Codex, so they stay grade colours.
