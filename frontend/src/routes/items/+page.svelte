@@ -95,7 +95,11 @@
 				{/if}
 			</section>
 
-			<section aria-label="House chests" class="space-y-4 lg:border-l lg:border-base-content/10 lg:pl-8">
+			<!-- Takes the width left by the characters and wraps its chests; drops below only when under 25rem. -->
+			<section
+				aria-label="House chests"
+				class="min-w-0 flex-1 basis-[25rem] space-y-4 lg:border-l lg:border-base-content/10 lg:pl-8"
+			>
 				<h2 class="text-xs font-semibold uppercase tracking-wide opacity-60">House chests</h2>
 				{#if chests.length}
 					{@render tabs(

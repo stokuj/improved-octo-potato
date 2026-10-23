@@ -2,6 +2,19 @@
 
 Continuity notes between sessions. Update at the end of each session.
 
+## 2026-10-23: Items page (warehouse and house chests)
+
+Branch `feature/items`, plan `superpowers/plans/2026-10-23-items.md`.
+
+- Imports ArcheBag 7d `inventory.csv` (bag + warehouse, `container`) and `chests.csv`; the old 8-column header is rejected.
+- `inventory_snapshot` gains `container` and `chest` (migration `0004`); keep-two per place; `inventory_chest_name` keeps each chest's last non-empty name.
+- API: `GET /api/inventory/characters` (bag + bank grids), `GET /api/inventory/chests`; `/characters/{name}` removed.
+- `/items` replaces `/inventory` (redirect): characters left, chests right, `All` on both sides.
+
+Next:
+- fix the wrong Codex icons;
+- search across all storage ("where is this item"), then crafting.
+
 ## 2026-10-23: Codex icons by item_type
 
 Branch `feature/codex-icons`. The game's bag item info has no `icon` field (only `gradeIcon`, see ArcheMarket invspike dump), so the planned ArcheBag `icon` column was dropped. The server now finds each icon on the Codex item page by `item_type`. The unused `icon` CSV column and `inventory_slot.icon` are removed (migration `0003`).

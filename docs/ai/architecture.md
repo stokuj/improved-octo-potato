@@ -8,15 +8,15 @@ Player's PC                                   Server
 ArcheRage + ArcheMarket addon                 Caddy (TLS, headers)
   └─ writes listings.csv, market.csv           ├─ /api/*   → FastAPI backend
 ArcheBag addon                                 ├─ /admin*  → FastAPI (sqladmin, IP allowlist)
-  └─ writes inventory.csv                      └─ /*       → SvelteKit (adapter-node)
+  └─ writes inventory.csv, chests.csv          └─ /*       → SvelteKit (adapter-node)
 Browser
   └─ /import: drag & drop CSVs ──────────────► POST /api/import  (signed in; market files admin only)
   └─ /market: charts and tables  ◄──────────── GET  /api/market/*    (public)
-  └─ /inventory: bag grid        ◄──────────── GET  /api/inventory/* (own data; icons public)
+  └─ /items: bag, warehouse, chests ◄──────── GET  /api/inventory/* (own data; icons public)
                                               PostgreSQL 16 · icon cache volume ◄── archeagecodex.com
 ```
 
-Both addons live in a separate repo (`ArcheMarket`); their CSV contracts are described there (`llm-wiki/project/step7-design.md`, `step7b-design.md`, `step7c-design.md`). Nothing uploads automatically: the user uploads files by hand.
+Both addons live in a separate repo (`ArcheMarket`); their CSV contracts are described there (`llm-wiki/project/step7-design.md`, `step7b-design.md`, `step7c-design.md`, `step7d-design.md`). Nothing uploads automatically: the user uploads files by hand.
 
 ## Backend modules (`backend/app/`)
 
@@ -27,7 +27,7 @@ Both addons live in a separate repo (`ArcheMarket`); their CSV contracts are des
 | `auth/` | `User` model, fastapi-users wiring (cookie JWT), Google OAuth (`oauth.py`), password login outside prod, `/api/users/*`, `cli.py` (`create-superuser`) |
 | `market/` | `Item`, `MarketDay`, `Listing`; CSV parsing (`csv_format.py`), import and read services, `/api/market/*` |
 | `imports/` | `POST /api/import`: detects each file's kind by its exact header and hands it to `market` or `inventory`; `ImportFileResult` and `failed()` |
-| `inventory/` | `InventorySnapshot`, `InventorySlot`; `inventory.csv` parsing (`csv_format.py`), keep-two import, read API, Codex icon cache (`icons.py`), `/api/inventory/*` |
+| `inventory/` | `InventorySnapshot`, `InventorySlot`, `ChestName`; `inventory.csv` and `chests.csv` parsing (`csv_format.py`), keep-two import per place, read API, Codex icon cache (`icons.py`), `/api/inventory/*` |
 
 Frozen reference code (not imported, routed, migrated or tested): `backend/frozen/{crafting,inventory}`, `frontend/frozen/{crafting,inventory,e2e}`.
 
@@ -41,18 +41,21 @@ market_day  PK (item_id → item.id, day date), daily_avg, weekly_avg, min, max,
             scan_id bigint, captured_at timestamp
 listing     PK (item_id → item.id, scan_id bigint, rank smallint), captured_at, status,
             unit_price bigint NULL, listing_price bigint NULL, stack int NULL
-inventory_snapshot  id PK, user_id → user.id (CASCADE), character varchar(64), snapshot_id bigint,
-                    captured_at, slot_count; UNIQUE (user_id, character, snapshot_id)
+inventory_snapshot  id PK, user_id → user.id (CASCADE), container varchar(5) (bag|bank|chest),
+                    chest smallint (1..10, 0 unless chest), character varchar(64) (for a chest: who saved it),
+                    snapshot_id bigint, captured_at, slot_count
+                    UNIQUE (user_id, container, chest, character, snapshot_id)
 inventory_slot      PK (snapshot → inventory_snapshot.id CASCADE, slot), item NULL, item_type NULL,
                     item_grade NULL, count   (empty slots stored too)
+inventory_chest_name  PK (user_id → user.id CASCADE, chest smallint), name varchar(15), captured_at
 ```
 
-Migrations: `0001_baseline`, `0002_inventory`, `0003_inventory_drop_icon`. Copper is stored as integers (1 g = 10 000 c). `item_grade` is the raw game int (`ITEM_GRADE_TYPE`, 0 for most materials).
+Migrations: `0001_baseline`, `0002_inventory`, `0003_inventory_drop_icon`, `0004_inventory_places` (existing snapshots become bags). Copper is stored as integers (1 g = 10 000 c). `item_grade` is the raw game int (`ITEM_GRADE_TYPE`, 0 for most materials).
 
 ## Import flow (`POST /api/import`)
 
 `imports.services.import_file` reads the first line of each file:
-- the inventory header goes to `inventory`;
+- the inventory or chests header goes to `inventory`, with kind `inventory` or `chests`;
 - a market or listings header goes to `market`, but only for a superuser. Anyone else gets that file back with one error, `admin only`;
 - anything else goes to `market`, which answers `unknown header`.
 
@@ -81,24 +84,26 @@ The caller's `id` and `is_superuser` are read once, before the loop. A file that
 
 ### Inventory files
 
-1. `inventory/csv_format.parse_inventory` groups lines by `(character, snapshot_id)`.
+1. `inventory/csv_format.parse_inventory` reads either header (the old 8-column one is `unknown header`) and groups lines by place and `snapshot_id`: `(container, character, snapshot_id)` for `inventory.csv`, where one `Bag` click writes the bag and the warehouse under one `snapshot_id`, and `(chest, snapshot_id)` for `chests.csv`. `category`, `npc_price` and the chest position are read past and not stored.
    - Inside a group, each `slot == 1` starts a new run, and only the last run is kept. A same-second double click in game writes two runs; the earlier ones count as `skipped`.
    - The kept run must have slots exactly `1..N` with N ≤ 300 and a single `captured_at`. Otherwise every line of it is an error.
-2. For each `(user, character)`, the stored snapshots and the uploaded ones are ranked by `(captured_at, snapshot_id)` and only the **two newest** are kept.
+2. For each place (a character's bag, a character's warehouse, or a chest number whoever saved it), the stored snapshots and the uploaded ones are ranked by `(captured_at, snapshot_id)` and only the **two newest** are kept.
    - Older snapshots are deleted, and their slots cascade.
    - A snapshot that is already stored, or that is too old to make the top two, is skipped.
    - The same sum rule applies.
+3. **Chest names.** An empty name means "no change", because the addon's name boxes can come up empty after a game restart. Per chest, the newest named save in the file is upserted into `inventory_chest_name` when it is newer than the stored one, so an older file never renames a chest back.
 
 ## Inventory read API (`/api/inventory`, signed-in user's own data)
 
 | Endpoint | Returns |
 |---|---|
-| `GET /characters` | the user's characters with the newest and previous `captured_at`, `slot_count` and `filled` |
-| `GET /characters/{name}` | the newest snapshot's slots in order, each with `change` and `delta` |
+| `GET /characters` | the user's characters by name, each with `bag` and `bank` grids (or null) |
+| `GET /chests` | the user's chests by number, each a grid plus `chest`, `name` (null if never named) and `saved_by` |
 | `GET /icons/{item_type}.png` | a cached Codex icon; **public**, 404 when missing, 422 for a non-positive or non-integer id |
 
-- **Change flags.** `change` compares totals per `(item_type, item_grade)` against the previous snapshot: `new`, `up`, `down`, or null when there is no change or no previous snapshot. A moved stack is no change, and items that left the bag are not shown.
-- **Ownership.** Another user's character is 404.
+- **Grids.** A grid is a place's newest snapshot: `captured_at`, `previous_captured_at`, `slot_count`, `filled` and its slots in order. Each list loads with one query for snapshots and one for slots.
+- **Change flags.** `change` compares totals per `(item_type, item_grade)` against the place's previous snapshot: `new`, `up`, `down`, or null when there is no change or no previous snapshot. A moved stack is no change, and items that left the bag are not shown.
+- **Ownership.** Every query is scoped to the signed-in user; others' data never appears.
 - **Icons.**
   - The game gives no icon path for bag items, so icons are looked up by `item_type`. A cache miss fetches the Codex item page `https://archeagecodex.com/us/item/{item_type}/`, takes the first image in its `item-icon` cell (`items/…png`, sometimes in a subfolder), then fetches that PNG (5 s timeout) into `ICON_CACHE_DIR/{item_type}.png`.
   - Codex answers an unknown id with a 200 `ERROR!` page, and an unknown PNG with a generic image recognised by its SHA-256. Both are remembered as `{item_type}.missing`, so the tile shows its grade colour.
@@ -144,12 +149,12 @@ How `/summary` is computed. "Today" is the item's newest day:
 |---|---|
 | `lib/core/` | API base URL, auth state (Svelte 5 runes + context), `formatCurrency`, generated `api.d.ts` + `types.ts` |
 | `lib/market/` | API helpers, `chart.ts` (pure ECharts option builder), `MarketChart`, `ListingsTable`, `SummaryTable`, `ImportDropzone` |
-| `lib/inventory/` | API helpers, `grid.ts` (slot position, tile label, change dot), `grades.ts` (grade names and pastel placeholder colours), `InventoryGrid`, `InventoryTile` |
-| `routes/` | `/` → `/market`, `/market`, `/inventory` (tab per character in `?character=`), `/import` (signed in), `/auth` (Google button; password form when `PUBLIC_PASSWORD_LOGIN=true`), `/auth/callback`, `/about` |
+| `lib/inventory/` | API helpers, `grid.ts` (slot position, tile label, change dot, `pickTab`, `chestLabel`, `snapshotTime`), `grades.ts` (grade names and pastel placeholder colours), `GridPanel`, `InventoryGrid`, `InventoryTile` |
+| `routes/` | `/` → `/market`, `/market`, `/items` (characters left, house chests right; `?character=` and `?chest=`, `All` by default), `/inventory` → `/items`, `/import` (signed in), `/auth` (Google button; password form when `PUBLIC_PASSWORD_LOGIN=true`), `/auth/callback`, `/about` |
 
 - The chart is one ECharts instance with two stacked panels sharing the date axis: daily and 7-day average lines on top, volume bars below. It uses the SVG renderer.
 - CSP `connect-src` and `img-src` allow the origin of `PUBLIC_API_URL`, set in `svelte.config.js`. Icons are served by the API.
-- **The bag grid** is 10 columns, with slot 1 top-left.
+- **Every grid** (bag, warehouse, chest) is 10 columns, with slot 1 top-left, inside a `GridPanel` that shows `filled / slots` and its own snapshot times.
   - A tile shows the Codex icon over its grade's pastel colour, which is all that shows when the icon is missing or fails to load.
   - Empty slots have a dashed outline.
   - The count sits bottom-right, and a change dot top-left.
