@@ -14,7 +14,8 @@ make seed                                 # optional: import the sample CSVs
 ## Importing data
 
 1. Sign in at `/auth` with the superuser account (Google in prod; the password form in dev).
-2. Open `/import` and drop `market.csv` and `listings.csv` from the addon folder (`Documents/Addon/archemarket/`), or use **Choose files**.
+2. Open `/import` and drop `market.csv` and `listings.csv` from the addon folder (`Documents/Addon/archemarket/`), or use **Choose files**. Market files are admin only.
+   For the bag view, click **Bag** in game (ArcheBag addon) and drop `inventory.csv` from `Documents/Addon/archebag/`. It then shows on `/inventory`, one tab per character.
 3. The summary shows, per file, how many rows were inserted, updated, skipped, and which lines had errors.
 
 Uploading the same file again is safe: nothing is duplicated, and for each item and date the newest scan wins. The addon only appends to its CSVs, so you can archive or empty old files at any time.
