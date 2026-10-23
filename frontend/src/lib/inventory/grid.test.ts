@@ -77,6 +77,9 @@ describe('chestOwner', () => {
 		expect(chestOwner({ name: "Adventurer's", saved_by: 'Alpha' }, chars)).toBe('Alpha');
 		expect(chestOwner({ name: 'adventurers chest', saved_by: 'Alpha' }, chars)).toBe('Alpha');
 		expect(chestOwner({ name: '30-Slot Shard', saved_by: 'Alpha' }, chars)).toBe('Alpha');
+		// The addon's name box stops at 15 characters, so a typed item name may end mid-word.
+		expect(chestOwner({ name: "Adventurer's Ch", saved_by: 'Alpha' }, chars)).toBe('Alpha');
+		expect(chestOwner({ name: '30-Slot Shard C', saved_by: 'Alpha' }, chars)).toBe('Alpha');
 	});
 
 	it('leaves land chests, unnamed chests and other savers on the house side', () => {
