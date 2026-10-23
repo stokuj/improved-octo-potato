@@ -1,47 +1,49 @@
-# sqladmin login backend (superusers only).
+# sqladmin auth: reuses the app's fastapiusersauth cookie (superusers only).
 from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
 from sqladmin.authentication import AuthenticationBackend
 
+from app.auth.backend import cookie_transport, get_jwt_strategy
 from app.auth.dependencies import get_user_manager, get_user_db
 from app.core.db import async_session_maker
 from app.core.settings import settings
-from app.auth.models import User
+
+
+def sign_in_redirect() -> RedirectResponse:
+    return RedirectResponse(f"{settings.frontend_url}/auth", status_code=302)
 
 
 class AdminAuth(AuthenticationBackend):
     async def login(self, request: Request) -> bool:
-        form = await request.form()
-        email = str(form.get("username"))
-        password = str(form.get("password"))
-
-        async with async_session_maker() as session:
-            async for user_db in get_user_db(session):
-                async for user_manager in get_user_manager(user_db):
-                    try:
-                        user = await user_manager.authenticate(email, password)
-                    except Exception:
-                        return False
-
-                    if user and user.is_superuser and user.is_active:
-                        request.session.update({"user_id": str(user.id)})
-                        return True
+        # Signing in happens on the frontend (/auth); the sqladmin form is not a way in.
         return False
 
     async def logout(self, request: Request) -> Response:
         request.session.clear()
-        return RedirectResponse(location=request.url_for("admin:login"))
+        response = sign_in_redirect()
+        # Same attributes fastapi-users sets the cookie with, so browsers drop that one.
+        response.delete_cookie(
+            cookie_transport.cookie_name,
+            path=cookie_transport.cookie_path,
+            domain=cookie_transport.cookie_domain,
+            secure=cookie_transport.cookie_secure,
+            httponly=cookie_transport.cookie_httponly,
+            samesite=cookie_transport.cookie_samesite,
+        )
+        return response
 
-    async def authenticate(self, request: Request) -> bool:
-        user_id = request.session.get("user_id")
-        if not user_id:
-            return False
+    async def authenticate(self, request: Request) -> Response | bool:
+        token = request.cookies.get(cookie_transport.cookie_name)
+        if not token:
+            return sign_in_redirect()
 
         async with async_session_maker() as session:
-            user = await session.get(User, user_id)
-            if user and user.is_superuser and user.is_active:
-                return True
-        return False
+            async for user_db in get_user_db(session):
+                async for user_manager in get_user_manager(user_db):
+                    user = await get_jwt_strategy().read_token(token, user_manager)
+                    if user and user.is_superuser and user.is_active:
+                        return True
+        return sign_in_redirect()
 
 
 # Wrap login and authenticate to enforce secure session cookie if needed

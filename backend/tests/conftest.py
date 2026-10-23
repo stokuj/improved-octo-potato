@@ -11,6 +11,8 @@ os.environ["DATABASE_URL"] = (
 )
 os.environ["AUTH_SECRET"] = "test-secret-must-be-at-least-32-characters-here"
 os.environ["ADMIN_SESSION_SECRET"] = "test-admin-secret-must-be-32-chars-here"
+os.environ["GOOGLE_CLIENT_ID"] = "test-google-client-id"
+os.environ["GOOGLE_CLIENT_SECRET"] = "test-google-client-secret"
 
 import uuid
 

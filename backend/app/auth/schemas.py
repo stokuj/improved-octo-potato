@@ -18,5 +18,14 @@ class UserRead(BaseModel):
     is_superuser: bool
 
 
-class UserUpdate(fu_schemas.BaseUserUpdate):
-    pass
+class UserUpdate(fu_schemas.CreateUpdateDictModel):
+    """BaseUserUpdate without ``email``: in prod the email is the Google sign-in
+    key, so changing it would lock the owner out. fastapi-users already ignores
+    the flags on /users/me (safe update); superusers may set them on /users/{id}."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    password: str | None = None
+    is_active: bool | None = None
+    is_superuser: bool | None = None
+    is_verified: bool | None = None

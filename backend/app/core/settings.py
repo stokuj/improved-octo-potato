@@ -1,7 +1,7 @@
 # App settings from env/.env, with prod secret checks.
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,12 +35,24 @@ class Settings(BaseSettings):
     reset_token_secret: str = _DEFAULT_RESET_SECRET
     verification_token_secret: str = _DEFAULT_VERIFY_SECRET
 
+    # Google sign-in; the OAuth router is mounted only when both are set.
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    # Where Google sends the browser back (/auth/callback) and /admin sends anonymous users.
+    frontend_url: str = "http://localhost:5173"
+
     cookie_secure: bool = False
     sql_echo: bool = False
     # Env format: JSON array string, e.g., '["http://localhost:3000"]'
     cors_origins: list[str] = Field(
         default=["http://localhost:5173", "http://127.0.0.1:5173"]
     )
+
+    @field_validator("frontend_url")
+    @classmethod
+    def _strip_trailing_slash(cls, value: str) -> str:
+        # Used as f"{frontend_url}/auth/callback"; Google rejects "//auth".
+        return value.rstrip("/")
 
     @model_validator(mode="after")
     def _check_secrets(self) -> "Settings":
@@ -59,6 +71,10 @@ class Settings(BaseSettings):
                     raise ValueError(
                         f"{name} is using default value — must be set explicitly in prod"
                     )
+            if not (self.google_client_id and self.google_client_secret):
+                raise ValueError(
+                    "google_client_id and google_client_secret are required in prod"
+                )
         token_secrets = {
             self.auth_secret,
             self.reset_token_secret,

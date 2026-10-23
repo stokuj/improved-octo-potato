@@ -6,6 +6,7 @@ Rules that do not change without a deliberate decision. When you change one, rec
 
 - All endpoints live under `/api/`; the admin is at `/admin`, not under `/api`.
 - Only a superuser can import (`POST /api/market/import`). Market reads are public.
+- Production has no password login: Google sign-in only. Google sign-in never creates accounts; they come only from `create-superuser`.
 - The import is idempotent: the same file uploaded twice changes nothing.
 - Newest scan wins per (item, date). An older scan never overwrites newer data.
 - Every data line of an upload is accounted for: `inserted + updated + skipped + error_count == rows`.

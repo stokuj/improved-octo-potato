@@ -35,6 +35,9 @@ services:
       SQL_ECHO: ${SQL_ECHO:-false}
       CORS_ORIGINS: '["https://${APP_DOMAIN}","https://${APP_WWW_DOMAIN}"]'
       COOKIE_SECURE: "true"
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?GOOGLE_CLIENT_SECRET is required}
+      FRONTEND_URL: https://${APP_DOMAIN}
     depends_on:
       db:
         condition: service_healthy

@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { login, getUserState } from '$lib/core/auth.svelte.js';
+    import { login, getUserState, getGoogleAuthorizeUrl } from '$lib/core/auth.svelte.js';
+    import { PASSWORD_LOGIN } from '$lib/core/config.js';
 
     const user = getUserState();
 
@@ -20,7 +21,21 @@
         }
         isLoading = false;
     }
+
+    async function handleGoogle() {
+        isLoading = true;
+        errorMessage = '';
+        try {
+            window.location.assign(await getGoogleAuthorizeUrl());
+        } catch (e) {
+            errorMessage = e instanceof Error ? e.message : 'Google sign-in failed. Try again.';
+            isLoading = false;
+        }
+    }
 </script>
+
+<!-- Back from Google restores this page from the bfcache with isLoading still true. -->
+<svelte:window onpageshow={() => (isLoading = false)} />
 
 <div class="flex justify-center items-center py-12 min-h-[70vh] bg-base-200/30 rounded-box">
     <div class="card bg-base-100 w-full max-w-[440px] shadow-xl border border-base-200">
@@ -37,6 +52,13 @@
                     <span>{errorMessage}</span>
                 </div>
             {/if}
+
+            <button type="button" class="btn btn-primary w-full h-12 shadow-md shadow-primary/10 font-bold" onclick={handleGoogle} disabled={isLoading}>
+                Continue with Google
+            </button>
+
+            {#if PASSWORD_LOGIN}
+            <div class="divider text-xs opacity-40">or</div>
 
             <form onsubmit={handleSubmit} class="space-y-5 w-full">
                 <div class="form-control w-full">
@@ -74,6 +96,7 @@
                     Sign In
                 </button>
             </form>
+            {/if}
 
             <p class="text-center text-xs opacity-30 mt-6 font-bold uppercase tracking-widest">
                 AA Tracker — ArcheAge Market Monitor

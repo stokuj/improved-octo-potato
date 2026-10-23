@@ -1,5 +1,8 @@
 import pytest
-from httpx import AsyncClient
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
+
+from app.core.rate_limit import limiter
 
 
 async def test_register_route_is_gone(client: AsyncClient) -> None:
@@ -59,3 +62,44 @@ async def test_logout_clears_cookie(client: AsyncClient, make_user, login) -> No
     logout_resp = await client.post("/api/auth/logout")
     assert logout_resp.status_code == 204
     assert (await client.get("/api/users/me")).status_code == 401
+
+
+def _prod_like_app() -> FastAPI:
+    from app.auth.router import build_router
+
+    prod = FastAPI()
+    prod.state.limiter = limiter
+    prod.include_router(build_router(password_login=False), prefix="/api")
+    return prod
+
+
+async def test_prod_has_no_password_login(make_user) -> None:
+    user, pwd = await make_user()
+    async with AsyncClient(
+        transport=ASGITransport(app=_prod_like_app()), base_url="http://test"
+    ) as c:
+        r = await c.post(
+            "/api/auth/login", data={"username": user.email, "password": pwd}
+        )
+    assert r.status_code in (404, 405)
+
+
+async def test_prod_logout_works(client: AsyncClient, make_user, login) -> None:
+    user, pwd = await make_user()
+    await login(client, user.email, pwd)
+    async with AsyncClient(
+        transport=ASGITransport(app=_prod_like_app()),
+        base_url="http://test",
+        cookies={"fastapiusersauth": client.cookies["fastapiusersauth"]},
+    ) as c:
+        r = await c.post("/api/auth/logout")
+    assert r.status_code == 204
+    set_cookie = r.headers["set-cookie"]
+    assert 'fastapiusersauth=""' in set_cookie or "Max-Age=0" in set_cookie
+
+
+def test_only_one_login_route() -> None:
+    from app.main import app
+
+    logins = [r for r in app.routes if getattr(r, "path", None) == "/api/auth/login"]
+    assert len(logins) == 1

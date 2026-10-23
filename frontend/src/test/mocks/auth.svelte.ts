@@ -64,3 +64,5 @@ export async function logout(user: any): Promise<void> {
 	user.data = null;
 	user.isLoggedIn = false;
 }
+
+export const getGoogleAuthorizeUrl = vi.fn(async () => 'https://accounts.google.com/x');

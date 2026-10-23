@@ -89,6 +89,56 @@ export async function login(
     }
 }
 
+const GOOGLE_ERRORS: Record<string, string> = {
+    LOGIN_BAD_CREDENTIALS: 'This Google account has no access.',
+    OAUTH_NOT_AVAILABLE_EMAIL: 'Google did not return a verified email.',
+    access_denied: 'Sign-in was cancelled.',
+    GOOGLE_PROFILE_UNAVAILABLE: 'Could not read your Google profile. Check that the People API is enabled.'
+};
+const GOOGLE_FAILED = 'Google sign-in failed. Try again.';
+
+/** Ask the backend for the Google consent URL (also sets its CSRF cookie). */
+export async function getGoogleAuthorizeUrl(): Promise<string> {
+    const response = await fetch(`${API_URL}/auth/google/authorize`, { credentials: 'include' });
+    if (response.status === 404) {
+        throw new Error('Google sign-in is not configured');
+    }
+    if (!response.ok) {
+        throw new Error(GOOGLE_FAILED);
+    }
+    const { authorization_url } = await response.json();
+    return authorization_url;
+}
+
+/** Finish the Google flow: `search` is the callback page's `?code=…&state=…`. */
+export async function finishGoogleLogin(
+    user: UserState,
+    search: string
+): Promise<{ success: boolean; message?: string }> {
+    let response: Response;
+    try {
+        response = await fetch(`${API_URL}/auth/google/callback${search}`, {
+            credentials: 'include'
+        });
+    } catch {
+        // Network or CORS failure: the callback page must still show an error, not spin.
+        return { success: false, message: GOOGLE_FAILED };
+    }
+
+    if (response.ok) {
+        await checkMe(user);
+        goto('/market');
+        return { success: true };
+    }
+    let detail = '';
+    try {
+        detail = (await response.json()).detail;
+    } catch {
+        // Non-JSON error body (e.g. a 500): fall back to the generic message.
+    }
+    return { success: false, message: GOOGLE_ERRORS[detail] ?? GOOGLE_FAILED };
+}
+
 export async function logout(user: UserState): Promise<void> {
     await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
     user.data = null;

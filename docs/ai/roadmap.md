@@ -5,7 +5,8 @@
 | Feature | Notes |
 |---|---|
 | ArcheMarket CSV rebuild (2026-10-21) | Manual upload of `listings.csv` and `market.csv`, idempotent import, `/market` with a 14-day chart, offers and a today-vs-7-days table. Bot, addons, ingest, prices, watchlist and profiles removed. Spec: `superpowers/specs/2026-10-21-archemarket-csv-design.md` |
-| Auth | Single admin account, cookie JWT, `create-superuser` CLI |
+| Auth | Single admin account from the `create-superuser` CLI, cookie JWT (7 days) |
+| Google-only login (2026-10-21) | Prod signs in with Google only; existing superusers matched by verified email; `/admin` on the same cookie. Spec: `superpowers/specs/2026-10-21-google-login-design.md` |
 | Admin panel | sqladmin at `/admin`, read-only market views |
 | Infra | Podman compose dev/prod/e2e, Caddy, Makefile, CI (ruff, pytest, alembic check, svelte-check, vitest, docker builds, infra checks, non-blocking e2e) |
 
