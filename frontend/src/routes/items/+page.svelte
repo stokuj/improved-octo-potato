@@ -51,7 +51,7 @@
 
 {#snippet tabs(param: 'character' | 'chest', selected: string, options: { value: string; label: string }[])}
 	<div role="tablist" class="tabs tabs-box w-fit">
-		{#each [{ value: ALL, label: ALL }, ...options] as o (o.value)}
+		{#each [{ value: ALL, label: 'All' }, ...options] as o (o.value)}
 			<button
 				role="tab"
 				class="tab {o.value === selected ? 'tab-active' : ''}"

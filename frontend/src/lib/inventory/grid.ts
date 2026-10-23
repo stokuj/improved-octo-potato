@@ -20,7 +20,8 @@ export function changeDot(change: SlotRead['change']): 'up' | 'down' | 'new' | n
 	return change ?? null;
 }
 
-export const ALL = 'All';
+// The All tab's value; '' can't be a character name or a chest number, unlike 'All'.
+export const ALL = '';
 
 /** The tab named in the URL, or All when it is missing or unknown (renamed character, old link). */
 export function pickTab(value: string | null, options: string[]): string {

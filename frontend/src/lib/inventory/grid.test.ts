@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { changeDot, chestLabel, pickTab, slotPosition, tileLabel } from './grid';
+import { ALL, changeDot, chestLabel, pickTab, slotPosition, tileLabel } from './grid';
 import type { SlotRead } from '$lib/core/types';
 
 const slot = (over: Partial<SlotRead>): SlotRead => ({
@@ -46,8 +46,9 @@ describe('changeDot', () => {
 describe('pickTab', () => {
 	it('keeps a known tab and falls back to All', () => {
 		expect(pickTab('Alpha', ['Alpha'])).toBe('Alpha');
-		expect(pickTab('Ghost', ['Alpha'])).toBe('All');
-		expect(pickTab(null, [])).toBe('All');
+		expect(pickTab('Ghost', ['Alpha'])).toBe(ALL);
+		expect(pickTab(null, [])).toBe(ALL);
+		expect(pickTab('All', ['All'])).toBe('All');
 	});
 });
 

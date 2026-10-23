@@ -128,6 +128,16 @@ describe('items page', () => {
 		for (const s of ['inventory.csv', 'chests.csv', 'Bag', 'Chest']) expect(text).toContain(s);
 	});
 
+	it('lets a character named All be picked', async () => {
+		open('', { characters: [...characters, { character: 'All', bag: grid(20), bank: null }] });
+		await waitFor(() => expect(panels('Characters')).toHaveLength(5));
+		const named = [...section('Characters').querySelectorAll<HTMLElement>('[role="tab"]')].filter((t) => t.textContent!.trim() === 'All');
+		expect(named).toHaveLength(2);
+		await fireEvent.click(named[1]);
+		await waitFor(() => expect(page.url.searchParams.get('character')).toBe('All'));
+		await waitFor(() => expect(panels('Characters')).toHaveLength(1));
+	});
+
 	it('asks to sign in on 401', async () => {
 		(page as { url: URL }).url = new URL('http://localhost/items');
 		mockFetch({
