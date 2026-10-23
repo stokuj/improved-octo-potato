@@ -1,6 +1,6 @@
 // Fetch helpers for the /api/inventory endpoints (signed-in user's own data).
 import { API_BASE_URL } from '$lib/core/config.js';
-import type { BagRead, CharacterRead } from '$lib/core/types';
+import type { CharacterRead, ChestRead } from '$lib/core/types';
 import { ApiError } from '$lib/market/api';
 
 async function getJson<T>(path: string): Promise<T> {
@@ -13,8 +13,8 @@ export function fetchCharacters(): Promise<CharacterRead[]> {
 	return getJson('/inventory/characters');
 }
 
-export function fetchBag(character: string): Promise<BagRead> {
-	return getJson(`/inventory/characters/${encodeURIComponent(character)}`);
+export function fetchChests(): Promise<ChestRead[]> {
+	return getJson('/inventory/chests');
 }
 
 export function iconUrl(itemType: number): string {

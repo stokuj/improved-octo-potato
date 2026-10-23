@@ -41,8 +41,8 @@
 					<span class="loading loading-spinner loading-xs text-primary ml-2"></span>
 				{:else if user.isLoggedIn}
 					<li>
-						<a href="/inventory" class="font-semibold text-sm hover:text-primary transition-colors">
-							Inventory
+						<a href="/items" class="font-semibold text-sm hover:text-primary transition-colors">
+							Items
 						</a>
 					</li>
 					<li>
