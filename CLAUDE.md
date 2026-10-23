@@ -49,7 +49,7 @@ CI (`.github/workflows`):
 
 **Backend (`backend/app/`).**
 - Domain modules each have the same core files: `models.py`, `schemas.py`, `services.py`, `router.py`, plus `admin.py` where needed. Any other file starts with a one-line reason comment.
-- Shared plumbing is in `core/`: settings with prod secret checks, DB, errors, the **single** slowapi `limiter`, and `utcnow`.
+- Shared plumbing is in `core/`: settings with prod secret checks, DB, errors, the **single** slowapi `limiter`, `utcnow`, and JSON-lines logging with a request id (`get_logger(__name__).info("module.verb", **fields)`; never `print` for logs, never character names or emails in fields).
 - `auth/` holds `User` and fastapi-users with a 7-day cookie JWT. Prod signs in with Google only (existing active superusers, matched by verified email); the password route exists only outside prod. There are no register or reset routes: accounts come only from the CLI. `/admin` reuses the same cookie.
 - `market/` holds `Item`, `MarketDay` and `Listing`, plus the market import and read API under `/api/market`.
 - `imports/` owns `POST /api/import`. It routes each file by its header: market files are superuser only, and `inventory.csv` and `chests.csv` are open to any active user.

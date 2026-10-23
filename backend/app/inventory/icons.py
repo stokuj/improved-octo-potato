@@ -1,7 +1,6 @@
 # Fetches item icons from ArcheAge Codex once and serves them from a local cache.
 import asyncio
 import hashlib
-import logging
 import os
 import re
 import tempfile
@@ -11,9 +10,10 @@ from pathlib import Path
 
 import httpx
 
+from app.core.logging import get_logger
 from app.core.settings import settings
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 CODEX_PAGE = "https://archeagecodex.com/us/item/{item_type}/"
 CODEX_ORIGIN = "https://archeagecodex.com/"
@@ -64,13 +64,13 @@ async def fetch_codex(item_type: int) -> bytes | None:
                 if "<title>ERROR!" in page.text:  # Codex's page for an unknown id
                     return b""
                 if _ICON_CELL.search(page.text):
-                    log.warning("Codex icon path for %s is unusable", item_type)
+                    log.warning("icons.path_unusable", item_type=item_type)
                     return b""
-                log.warning("Codex page for %s has no icon box", item_type)
+                log.warning("icons.no_icon_box", item_type=item_type)
                 return None
             r = await client.get(CODEX_ORIGIN + path)
     except httpx.HTTPError as e:
-        log.warning("Codex icon %s failed: %r", item_type, e)
+        log.warning("icons.fetch_failed", item_type=item_type, error=repr(e))
         return None
     if (
         r.status_code != 200
