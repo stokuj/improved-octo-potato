@@ -112,23 +112,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/market/import": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Import Files */
-        post: operations["import_files_api_market_import_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/market/items": {
         parameters: {
             query?: never;
@@ -197,12 +180,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Files */
+        post: operations["import_files_api_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** Body_import_files_api_market_import_post */
-        Body_import_files_api_market_import_post: {
+        /** Body_import_files_api_import_post */
+        Body_import_files_api_import_post: {
             /** Files */
             files: string[];
         };
@@ -247,7 +247,7 @@ export interface components {
             /** Filename */
             filename: string;
             /** Kind */
-            kind: ("listings" | "market") | null;
+            kind: ("listings" | "market" | "inventory") | null;
             /** Rows */
             rows: number;
             /** Inserted */
@@ -773,39 +773,6 @@ export interface operations {
             };
         };
     };
-    import_files_api_market_import_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_import_files_api_market_import_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImportFileResult"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     read_items_api_market_items_get: {
         parameters: {
             query?: never;
@@ -906,6 +873,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SummaryRow"][];
+                };
+            };
+        };
+    };
+    import_files_api_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_files_api_import_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportFileResult"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

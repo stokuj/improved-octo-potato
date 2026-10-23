@@ -45,7 +45,7 @@ def split_by_scan(data: bytes) -> list[bytes]:
 
 async def upload(c: AsyncClient, *files: tuple[str, bytes]) -> list[dict]:
     r = await c.post(
-        "/api/market/import",
+        "/api/import",
         files=[("files", (n, d, "text/csv")) for n, d in files],
     )
     assert r.status_code == 200, r.text
@@ -209,12 +209,9 @@ async def test_file_over_cap(superuser_client: AsyncClient, monkeypatch) -> None
     assert_sum(res)
 
 
-async def test_import_requires_superuser(client: AsyncClient, make_user, login) -> None:
+async def test_import_requires_signed_in_user(client: AsyncClient) -> None:
     files = [("files", ("l.csv", b"", "text/csv"))]
-    assert (await client.post("/api/market/import", files=files)).status_code == 401
-    user, pwd = await make_user()
-    await login(client, user.email, pwd)
-    assert (await client.post("/api/market/import", files=files)).status_code == 403
+    assert (await client.post("/api/import", files=files)).status_code == 401
 
 
 def _market_rows(name: str, item_type: int, captured_at: int, value: int) -> list[str]:

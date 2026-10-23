@@ -12,9 +12,13 @@
 <div class="space-y-4">
 	<h1 class="text-2xl font-black tracking-tight">Import</h1>
 
-	{#if !user.data?.is_superuser}
-		<p class="opacity-70">Only the admin can import files.</p>
+	{#if !user.isLoggedIn}
+		<p class="opacity-70">Sign in to import files.</p>
 	{:else}
+		<p class="text-sm opacity-70">
+			Drop <code>inventory.csv</code> (ArcheBag), plus <code>market.csv</code> and
+			<code>listings.csv</code> (ArcheMarket, admin only).
+		</p>
 		<ImportDropzone onResults={(r) => (results = r)} />
 
 		{#if results.length}

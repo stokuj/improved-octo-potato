@@ -40,13 +40,16 @@
 				{#if user.loading}
 					<span class="loading loading-spinner loading-xs text-primary ml-2"></span>
 				{:else if user.isLoggedIn}
-					{#if user.data?.is_superuser}
-						<li>
-							<a href="/import" class="font-semibold text-sm hover:text-primary transition-colors">
-								Import
-							</a>
-						</li>
-					{/if}
+					<li>
+						<a href="/inventory" class="font-semibold text-sm hover:text-primary transition-colors">
+							Inventory
+						</a>
+					</li>
+					<li>
+						<a href="/import" class="font-semibold text-sm hover:text-primary transition-colors">
+							Import
+						</a>
+					</li>
 					<div class="dropdown dropdown-end ml-1">
 						<div tabindex="0" role="button" class="btn btn-ghost btn-sm btn-circle avatar placeholder">
 							<div class="bg-primary/20 text-primary rounded-full w-8 border border-primary/30">

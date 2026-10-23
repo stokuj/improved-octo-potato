@@ -1,4 +1,4 @@
-// Fetch helpers for the /api/market endpoints.
+// Fetch helpers for the /api/market endpoints and the shared /api/import upload.
 import { API_BASE_URL } from '$lib/core/config.js';
 import type {
 	ImportFileResult,
@@ -42,7 +42,7 @@ export function fetchSummary(): Promise<SummaryRow[]> {
 export async function uploadFiles(files: File[]): Promise<ImportFileResult[]> {
 	const body = new FormData();
 	for (const f of files) body.append('files', f);
-	const r = await fetch(`${API_BASE_URL}/market/import`, {
+	const r = await fetch(`${API_BASE_URL}/import`, {
 		method: 'POST',
 		body,
 		credentials: 'include'

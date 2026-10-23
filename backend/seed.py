@@ -6,7 +6,7 @@ from pathlib import Path
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.db import async_session_maker
-from app.market.schemas import ImportFileResult
+from app.imports.schemas import ImportFileResult
 from app.market.services import import_csv
 
 FIXTURES = Path(__file__).parent / "tests" / "market" / "fixtures"

@@ -14,9 +14,8 @@ from app.market.csv_format import (
 )
 from app.core.errors import NotFoundError
 from app.market.models import Item, Listing, MarketDay
+from app.imports.schemas import ImportFileResult, ImportRowError, failed
 from app.market.schemas import (
-    ImportFileResult,
-    ImportRowError,
     ListingRead,
     MarketDayRead,
     MarketItemRead,
@@ -197,29 +196,15 @@ async def _import_listings(
     return inserted, 0, len(rows) - inserted
 
 
-def _failed(filename: str, kind, rows: int, reason: str) -> ImportFileResult:
-    # Nothing imported: every row counts as an error so the sum still equals rows.
-    return ImportFileResult(
-        filename=filename,
-        kind=kind,
-        rows=rows,
-        inserted=0,
-        updated=0,
-        skipped=0,
-        error_count=rows,
-        errors=[ImportRowError(line=0, reason=reason)],
-    )
-
-
 async def import_csv(
     session: AsyncSession, filename: str, data: bytes
 ) -> ImportFileResult:
     if len(data) > MAX_FILE_BYTES:
-        return _failed(filename, None, 0, "file larger than 50 MB")
+        return failed(filename, None, 0, "file larger than 50 MB")
     try:
         parsed = parse_csv(data)
     except CsvFormatError as e:
-        return _failed(filename, None, 0, str(e))
+        return failed(filename, None, 0, str(e))
 
     errors = list(parsed.errors)
     importer = _import_market if parsed.kind == "market" else _import_listings
@@ -228,7 +213,7 @@ async def import_csv(
         await session.commit()
     except SQLAlchemyError as e:
         await session.rollback()
-        return _failed(
+        return failed(
             filename, parsed.kind, parsed.rows, f"database error: {type(e).__name__}"
         )
 
