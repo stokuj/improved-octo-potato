@@ -22,7 +22,7 @@ services:
     restart: unless-stopped
     command: >
       sh -c "uv run alembic upgrade head &&
-             uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+             uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log --reload
                     --proxy-headers --forwarded-allow-ips='*'"
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-app}

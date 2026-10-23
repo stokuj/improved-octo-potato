@@ -10,10 +10,13 @@ from app.imports.router import router as imports_router
 from app.inventory.router import router as inventory_router
 from httpx_oauth.integrations.fastapi import OAuth2AuthorizeCallbackError
 from app.core.errors import register_exception_handlers
+from app.core.logging import RequestIdMiddleware, configure_logging
 from app.core.rate_limit import limiter
 from app.core.settings import settings
 from app.market.router import router as market_router
 
+
+configure_logging(settings.log_level)
 
 _is_prod = settings.environment == "prod"
 
@@ -32,6 +35,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Added last, so it wraps everything (CORS included) and every response gets the id.
+app.add_middleware(RequestIdMiddleware)
 
 register_exception_handlers(app)
 app.add_exception_handler(OAuth2AuthorizeCallbackError, oauth_callback_error_handler)

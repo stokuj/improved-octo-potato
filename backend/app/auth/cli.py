@@ -7,6 +7,8 @@ from sqlmodel import select
 
 from app.auth.models import User
 from app.core.db import async_session_maker
+from app.core.logging import configure_logging
+from app.core.settings import settings
 
 
 async def create_superuser(email: str, password: str) -> bool:
@@ -26,6 +28,7 @@ async def create_superuser(email: str, password: str) -> bool:
 
 
 def main() -> None:
+    configure_logging(settings.log_level)
     parser = argparse.ArgumentParser(prog="python -m app.auth.cli")
     sub = parser.add_subparsers(dest="command", required=True)
     cmd = sub.add_parser("create-superuser", help="create or reset the superuser")

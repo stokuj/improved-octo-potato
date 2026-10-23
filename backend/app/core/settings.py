@@ -46,6 +46,7 @@ class Settings(BaseSettings):
 
     cookie_secure: bool = False
     sql_echo: bool = False
+    log_level: str = "INFO"
     # Env format: JSON array string, e.g., '["http://localhost:3000"]'
     cors_origins: list[str] = Field(
         default=["http://localhost:5173", "http://127.0.0.1:5173"]

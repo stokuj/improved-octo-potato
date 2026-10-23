@@ -30,6 +30,7 @@ Problems hit while building this app that the code does not explain by itself. T
 
 ## Infra
 
+- Under `--reload` (dev) or `--workers 2` (prod), uvicorn's supervisor process never imports the app, so its few lines ("Will watch for changes", "Started parent process") stay plain text, and so do the `alembic upgrade` lines at container start (alembic's own logging config). Every app line is JSON.
 - Caddy site addresses need `{$VAR}`, which is read when the config is parsed. `{env.VAR}` there fails `caddy validate`; it only works inside directives.
 
 ## Git and PRs

@@ -166,7 +166,9 @@ async def test_profile_error_logs_google_reason(monkeypatch, caplog):
     with pytest.raises(HTTPException) as exc:
         await client.get_id_email("t")
     assert exc.value.detail == "GOOGLE_PROFILE_UNAVAILABLE"
-    assert "People API has not been used" in caplog.text
+    [rec] = [r for r in caplog.records if r.getMessage() == "auth.oauth_failed"]
+    assert rec.fields["step"] == "profile" and rec.fields["status"] == 403
+    assert "People API has not been used" in rec.fields["reason"]
 
 
 async def test_failed_code_exchange_hides_google_text(client, monkeypatch, caplog):
@@ -178,7 +180,9 @@ async def test_failed_code_exchange_hides_google_text(client, monkeypatch, caplo
     r = await client.get(f"/api/auth/google/callback?code=reused&state={state}")
     assert r.status_code == 400
     assert r.json() == {"detail": "OAUTH_CODE_EXCHANGE_FAILED"}
-    assert "invalid_grant" in caplog.text
+    [rec] = [r for r in caplog.records if r.getMessage() == "auth.oauth_failed"]
+    assert rec.fields["step"] == "code_exchange"
+    assert "invalid_grant" in rec.fields["reason"]
 
 
 async def test_cancelled_consent_keeps_access_denied(client):
