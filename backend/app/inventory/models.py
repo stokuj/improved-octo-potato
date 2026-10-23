@@ -36,4 +36,3 @@ class InventorySlot(SQLModel, table=True):
     item_type: int | None = None
     item_grade: int | None = Field(default=None, sa_type=SmallInteger)
     count: int
-    icon: str | None = Field(default=None, max_length=64)

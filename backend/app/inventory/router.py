@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Path, Response
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.auth.dependencies import current_active_user
@@ -27,14 +27,11 @@ async def read_bag(
     return await services.get_bag(session, user.id, character)
 
 
-@router.get("/icons/{name}.png", response_class=Response)
-async def read_icon(name: str) -> Response:
+@router.get("/icons/{item_type}.png", response_class=Response)
+async def read_icon(item_type: int = Path(ge=1)) -> Response:
     """Public: game art only, no user data. 404 lets the frontend show the grade colour."""
-    valid = icons.valid_name(name)
-    if valid is None:
-        return Response(status_code=404)
     try:
-        data = await icons.get_icon(valid)
+        data = await icons.get_icon(item_type)
     except icons.FetchBudgetExceeded:
         return Response(status_code=503)
     if data is None:

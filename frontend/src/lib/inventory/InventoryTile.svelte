@@ -24,10 +24,10 @@
 		class="relative size-9 rounded-md focus:outline-2 focus:outline-primary {slot.item == null
 			? 'border border-dashed border-base-content/20'
 			: 'ring-1 ring-black/15'}"
-		style={slot.item != null && (!slot.icon || iconFailed) ? `background:${gradeColor(slot.item_grade)}` : ''}
+		style={slot.item != null ? `background:${gradeColor(slot.item_grade)}` : ''}
 	>
-		{#if slot.item != null && slot.icon && !iconFailed}
-			<img src={iconUrl(slot.icon)} alt="" class="size-full rounded-md" onerror={() => (iconFailed = true)} />
+		{#if slot.item_type != null && !iconFailed}
+			<img src={iconUrl(slot.item_type)} alt="" class="size-full rounded-md" onerror={() => (iconFailed = true)} />
 		{/if}
 		{#if slot.count > 1}
 			<span class="absolute bottom-0 right-0.5 text-[10px] font-bold leading-tight text-white [text-shadow:0_0_2px_#000,0_0_2px_#000]">

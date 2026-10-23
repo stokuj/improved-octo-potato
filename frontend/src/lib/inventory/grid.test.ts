@@ -3,7 +3,7 @@ import { changeDot, slotPosition, tileLabel } from './grid';
 import type { SlotRead } from '$lib/core/types';
 
 const slot = (over: Partial<SlotRead>): SlotRead => ({
-	slot: 1, item: null, item_type: null, item_grade: null, count: 0, icon: null, change: null, delta: null, ...over
+	slot: 1, item: null, item_type: null, item_grade: null, count: 0, change: null, delta: null, ...over
 });
 
 describe('slotPosition', () => {

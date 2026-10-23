@@ -18,7 +18,6 @@ class SlotRead(BaseModel):
     item_type: int | None
     item_grade: int | None
     count: int
-    icon: str | None
     # Per item (item_type, item_grade), summed over slots, newest vs previous snapshot.
     change: Literal["new", "up", "down"] | None
     delta: int | None

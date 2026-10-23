@@ -4,9 +4,7 @@ import pytest
 
 from app.inventory.csv_format import (
     INVENTORY_HEADER,
-    INVENTORY_HEADER_ICON,
     SlotRow,
-    normalize_icon,
     parse_inventory,
 )
 from app.market.csv_format import CsvFormatError
@@ -36,30 +34,11 @@ def test_fixture_two_characters() -> None:
     assert by_name["Alpha"].lines == 90
 
 
-def test_header_with_icon() -> None:
-    data = _file(
-        "7,7,Alpha,1,Leather,16327,0,412,Game/ui/icon/icon_item_0352.dds",
-        "7,7,Alpha,2,,,,0,",
-        header=INVENTORY_HEADER_ICON,
-    )
-    [snap] = parse_inventory(data).snapshots
-    assert snap.slots[0].icon == "icon_item_0352"
-    assert snap.slots[1].icon is None
-
-
-def test_normalize_icon() -> None:
-    assert normalize_icon("Game/ui/icon/ICON_Item_0352.dds") == "icon_item_0352"
-    assert normalize_icon("") is None
-    # Base name only, so no path part ever reaches the icon cache.
-    assert normalize_icon("../etc/passwd") == "passwd"
-    assert normalize_icon("Game/ui/icon/bad name!.dds") is None
-
-
 def test_empty_slot_line() -> None:
     [snap] = parse_inventory(
         _file("1,1,Alpha,1,Leather,16327,0,5", "1,1,Alpha,2,,,,0")
     ).snapshots
-    assert snap.slots[1] == SlotRow(2, None, None, None, 0, None)
+    assert snap.slots[1] == SlotRow(2, None, None, None, 0)
 
 
 def test_quoted_character_name() -> None:
@@ -116,7 +95,3 @@ def test_bom_and_crlf() -> None:
 def test_unknown_header() -> None:
     with pytest.raises(CsvFormatError, match="unknown header"):
         parse_inventory(b"a,b\n1,2\n")
-
-
-def test_icon_with_trailing_newline_is_rejected() -> None:
-    assert normalize_icon("Game/ui/icon/icon_item_1\n") is None

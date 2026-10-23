@@ -1,7 +1,6 @@
 # Parses ArcheBag inventory.csv into validated per-character snapshots.
 import csv
 import io
-import re
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -11,9 +10,7 @@ from app.market.csv_format import CsvFormatError, RowError, _int, _RowInvalid, _
 INVENTORY_HEADER = (
     "snapshot_id,captured_at,character,slot,item,item_type,item_grade,count"
 )
-INVENTORY_HEADER_ICON = INVENTORY_HEADER + ",icon"
 MAX_SLOTS = 300
-_ICON = re.compile(r"^[a-z0-9_]{1,64}$")
 
 
 @dataclass(frozen=True)
@@ -23,7 +20,6 @@ class SlotRow:
     item_type: int | None
     item_grade: int | None
     count: int
-    icon: str | None
 
 
 @dataclass
@@ -43,12 +39,6 @@ class ParsedInventory:
     skipped: int = 0  # lines of earlier runs dropped by a same-second double click
 
 
-def normalize_icon(raw: str) -> str | None:
-    """'Game/ui/icon/icon_item_0352.dds' -> 'icon_item_0352'; anything odd -> None."""
-    name = raw.replace("\\", "/").rsplit("/", 1)[-1].rsplit(".", 1)[0].lower()
-    return name if _ICON.fullmatch(name) else None
-
-
 @dataclass
 class _Line:
     line: int
@@ -57,23 +47,21 @@ class _Line:
     error: str | None = None
 
 
-def _slot(r: list[str], with_icon: bool) -> SlotRow:
+def _slot(r: list[str]) -> SlotRow:
     slot = _int(r[3], "slot")
     if slot < 1:
         raise _RowInvalid("slot must be at least 1")
     item = r[4] or None
     if item is None:
-        return SlotRow(slot, None, None, None, _int(r[7], "count"), None)
+        return SlotRow(slot, None, None, None, _int(r[7], "count"))
     if len(item) > 120:
         raise _RowInvalid("item name longer than 120 characters")
-    icon = normalize_icon(r[8]) if with_icon and r[8] else None
     return SlotRow(
         slot,
         item,
         _int(r[5], "item_type"),
         _int(r[6], "item_grade"),
         _int(r[7], "count"),
-        icon,
     )
 
 
@@ -103,10 +91,8 @@ def parse_inventory(data: bytes) -> ParsedInventory:
 def _read(text: str) -> ParsedInventory:
     reader = csv.reader(io.StringIO(text, newline=""))
     header = ",".join(next(reader, []))
-    if header not in (INVENTORY_HEADER, INVENTORY_HEADER_ICON):
+    if header != INVENTORY_HEADER:
         raise CsvFormatError("unknown header")
-    with_icon = header == INVENTORY_HEADER_ICON
-    width = 9 if with_icon else 8
 
     parsed = ParsedInventory()
     groups: dict[tuple[str, int], list[_Line]] = {}  # insertion order = file order
@@ -116,8 +102,8 @@ def _read(text: str) -> ParsedInventory:
         parsed.rows += 1
         entry = _Line(reader.line_num)
         try:
-            if len(r) != width:
-                raise _RowInvalid(f"expected {width} columns, got {len(r)}")
+            if len(r) != 8:
+                raise _RowInvalid(f"expected 8 columns, got {len(r)}")
             character = r[2]
             if not character or len(character) > 64:
                 raise _RowInvalid("character name must be 1..64 characters")
@@ -127,7 +113,7 @@ def _read(text: str) -> ParsedInventory:
             continue
         try:
             entry.captured_at = _ts(r[1])
-            entry.row = _slot(r, with_icon)
+            entry.row = _slot(r)
         except _RowInvalid as e:
             entry.error = str(e)
         groups.setdefault(key, []).append(entry)
