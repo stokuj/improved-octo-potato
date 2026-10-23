@@ -53,7 +53,7 @@ CI (`.github/workflows`):
 - `auth/` holds `User` and fastapi-users with a 7-day cookie JWT. Prod signs in with Google only (existing active superusers, matched by verified email); the password route exists only outside prod. There are no register or reset routes: accounts come only from the CLI. `/admin` reuses the same cookie.
 - `market/` holds `Item`, `MarketDay` and `Listing`, plus the market import and read API under `/api/market`.
 - `imports/` owns `POST /api/import`. It routes each file by its header: market files are superuser only, and `inventory.csv` is open to any active user.
-- `inventory/` holds per-user bag snapshots. It keeps the two newest per character and exposes the read API and a public Codex icon cache under `/api/inventory`.
+- `inventory/` holds per-user bag snapshots. It keeps the two newest per character and exposes the read API and a public Codex icon cache (looked up by `item_type`) under `/api/inventory`.
 - `admin/` is sqladmin at `/admin`.
 - Every API route is under `/api`. Modules use each other's services, never each other's models.
 
@@ -85,7 +85,7 @@ These invariants must hold:
 - Tests hit a real Postgres that is **not cleaned between tests**: use unique names and `item_type` values (see `rewrite_fixture` in `tests/market/test_import.py`). Create users with the `make_user` + `login` fixtures, and use `superuser_client` for admin calls. Test emails must use a real TLD like `@example.com`; `EmailStr` rejects `.local`.
 - e2e and local dev use the password form (`PUBLIC_PASSWORD_LOGIN=true`, read from `$env/dynamic/public`); no test talks to Google. Backend OAuth tests fake `google_client.get_access_token`/`get_profile`.
 - Login is rate-limited to 5/min per IP. Playwright logs in once (`e2e/auth.setup.ts` → storage state), and the rate-limit spec runs last in its own project. A quick local rerun can hit the limit.
-- Inventory tests use `backend/tests/inventory/fixtures/inventory.csv`. It is anonymised (`Alpha`, `Bravo`); never commit real character names. Tests never call Codex: fake `icons.fetch_codex`. `ICON_CACHE_DIR` points to a temp dir.
+- Inventory tests use `backend/tests/inventory/fixtures/inventory.csv`. It is anonymised (`Alpha`, `Bravo`); never commit real character names. Tests never call Codex: fake `icons.fetch_codex`, or route its HTTP through `fake_web` (an `httpx.MockTransport`) in `test_icons.py`. `ICON_CACHE_DIR` points to a temp dir.
 - Naive UTC datetimes in the DB. Money is integer copper (`bigint`), and `item_grade` is the raw game int.
 - Frontend stays on SvelteKit 2: SvelteKit 3 removes `$lib` and `svelte.config.js` (a roadmap item). Don't accept dependabot majors for kit, adapter-node or vitest without that migration.
 - Schema change: write an Alembic migration (`alembic/script.py.mako` already imports `sqlmodel`); `alembic check` must pass.

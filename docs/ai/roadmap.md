@@ -16,7 +16,6 @@
 | Feature | Priority | Notes |
 |---|---|---|
 | Warehouse and house chests | high | Next storage after the bag. Warehouse is per character (`X2Bank`), house chests per account (`X2Coffer`); both readable only while open in game. Needs ArcheBag work first |
-| ArcheBag `icon` column | high | ArcheBag appends `icon` (game path `Game/ui/icon/<name>.dds`). The app already accepts it; until then every tile is a grade colour |
 | Player registration | medium | Google sign-in creating non-admin accounts. Inventory data is already per user |
 | Rebuild crafting on the new item/price model | high | Reference code: `backend/frozen`, `frontend/frozen`. Buy price = cheapest listing `unit_price`, sell price = `daily_avg`. Bag prices come from ArcheMarket step 7c |
 | Graded items | medium | ArcheMarket must first write `item_type`/`item_grade` in `listings.csv`. Then key items on `(item_type, item_grade)` only, and drop `UNIQUE(name)` |

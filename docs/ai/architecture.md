@@ -44,15 +44,15 @@ listing     PK (item_id → item.id, scan_id bigint, rank smallint), captured_at
 inventory_snapshot  id PK, user_id → user.id (CASCADE), character varchar(64), snapshot_id bigint,
                     captured_at, slot_count; UNIQUE (user_id, character, snapshot_id)
 inventory_slot      PK (snapshot → inventory_snapshot.id CASCADE, slot), item NULL, item_type NULL,
-                    item_grade NULL, count, icon NULL   (empty slots stored too)
+                    item_grade NULL, count   (empty slots stored too)
 ```
 
-Migrations: `0001_baseline`, `0002_inventory`. Copper is stored as integers (1 g = 10 000 c). `item_grade` is the raw game int (`ITEM_GRADE_TYPE`, 0 for most materials).
+Migrations: `0001_baseline`, `0002_inventory`, `0003_inventory_drop_icon`. Copper is stored as integers (1 g = 10 000 c). `item_grade` is the raw game int (`ITEM_GRADE_TYPE`, 0 for most materials).
 
 ## Import flow (`POST /api/import`)
 
 `imports.services.import_file` reads the first line of each file:
-- the inventory header (with or without the trailing `icon` column) goes to `inventory`;
+- the inventory header goes to `inventory`;
 - a market or listings header goes to `market`, but only for a superuser. Anyone else gets that file back with one error, `admin only`;
 - anything else goes to `market`, which answers `unknown header`.
 
@@ -84,7 +84,6 @@ The caller's `id` and `is_superuser` are read once, before the loop. A file that
 1. `inventory/csv_format.parse_inventory` groups lines by `(character, snapshot_id)`.
    - Inside a group, each `slot == 1` starts a new run, and only the last run is kept. A same-second double click in game writes two runs; the earlier ones count as `skipped`.
    - The kept run must have slots exactly `1..N` with N ≤ 300 and a single `captured_at`. Otherwise every line of it is an error.
-   - The `icon` column is reduced to its lowercase base name (`icon_item_0352`).
 2. For each `(user, character)`, the stored snapshots and the uploaded ones are ranked by `(captured_at, snapshot_id)` and only the **two newest** are kept.
    - Older snapshots are deleted, and their slots cascade.
    - A snapshot that is already stored, or that is too old to make the top two, is skipped.
@@ -96,13 +95,16 @@ The caller's `id` and `is_superuser` are read once, before the loop. A file that
 |---|---|
 | `GET /characters` | the user's characters with the newest and previous `captured_at`, `slot_count` and `filled` |
 | `GET /characters/{name}` | the newest snapshot's slots in order, each with `change` and `delta` |
-| `GET /icons/{name}.png` | a cached Codex icon; **public**, 404 when missing |
+| `GET /icons/{item_type}.png` | a cached Codex icon; **public**, 404 when missing, 422 for a non-positive or non-integer id |
 
 - **Change flags.** `change` compares totals per `(item_type, item_grade)` against the previous snapshot: `new`, `up`, `down`, or null when there is no change or no previous snapshot. A moved stack is no change, and items that left the bag are not shown.
 - **Ownership.** Another user's character is 404.
 - **Icons.**
-  - A cache miss fetches `https://archeagecodex.com/items/{name}.png` once (5 s timeout) into `ICON_CACHE_DIR`.
-  - Codex answers unknown names with a generic 200 PNG. It is recognised by its SHA-256 and remembered as `{name}.missing`, so the tile shows its grade colour instead.
+  - The game gives no icon path for bag items, so icons are looked up by `item_type`. A cache miss fetches the Codex item page `https://archeagecodex.com/us/item/{item_type}/`, takes the first image in its `item-icon` cell (`items/…png`, sometimes in a subfolder), then fetches that PNG (5 s timeout) into `ICON_CACHE_DIR/{item_type}.png`.
+  - Codex answers an unknown id with a 200 `ERROR!` page, and an unknown PNG with a generic image recognised by its SHA-256. Both are remembered as `{item_type}.missing`, so the tile shows its grade colour.
+  - A page without the icon cell (Codex changed its HTML), a non-200 or a network error is not cached and is retried on the next request.
+  - Codex drops about 1 in 7 TCP connects, so each fetch retries connects twice (2 s connect timeout), and at most 4 fetches run in parallel.
+  - ArcheRage's own items (ids 8 000 000 and up) are not on Codex, so they stay grade colours.
   - At most 60 Codex fetches per minute per process; over that, the answer is 503. Cache hits are not limited.
 
 ## Read API (`/api/market`, public)
@@ -148,7 +150,7 @@ How `/summary` is computed. "Today" is the item's newest day:
 - The chart is one ECharts instance with two stacked panels sharing the date axis: daily and 7-day average lines on top, volume bars below. It uses the SVG renderer.
 - CSP `connect-src` and `img-src` allow the origin of `PUBLIC_API_URL`, set in `svelte.config.js`. Icons are served by the API.
 - **The bag grid** is 10 columns, with slot 1 top-left.
-  - A tile shows the Codex icon. When there is no icon, or it fails to load, the tile is its grade's pastel colour.
+  - A tile shows the Codex icon over its grade's pastel colour, which is all that shows when the icon is missing or fails to load.
   - Empty slots have a dashed outline.
   - The count sits bottom-right, and a change dot top-left.
   - The tooltip and the `aria-label` carry the name, grade, count and delta.

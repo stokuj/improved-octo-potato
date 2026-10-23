@@ -2,6 +2,14 @@
 
 Continuity notes between sessions. Update at the end of each session.
 
+## 2026-10-23: Codex icons by item_type
+
+Branch `feature/codex-icons`. The game's bag item info has no `icon` field (only `gradeIcon`, see ArcheMarket invspike dump), so the planned ArcheBag `icon` column was dropped. The server now finds each icon on the Codex item page by `item_type`. The unused `icon` CSV column and `inventory_slot.icon` are removed (migration `0003`).
+
+Next:
+- ArcheBag's new `inventory.csv` header (`container` bag/bank, `category`, `npc_price`) and `chests.csv`: the app rejects both today;
+- then warehouse and house chests in the UI.
+
 ## 2026-10-23: Inventory (bag) view
 
 Branch `feature/inventory`, stacked on `feature/google-login`. Plan: `superpowers/plans/2026-10-23-inventory.md`.
