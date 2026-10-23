@@ -8,7 +8,7 @@ ArcheRage Market Tracker. The user exports AH data with the ArcheMarket game add
 
 Stack: FastAPI + SQLModel + PostgreSQL 16, SvelteKit 2 (Svelte 5 runes) + DaisyUI + ECharts, podman compose.
 
-Deeper docs: `docs/CONTEXT.md` (domain glossary), `docs/architecture.md` (schema, import flow, invariants), `docs/patterns.md` (conventions and gotchas), `docs/constitution.md` (rules).
+Deeper docs: `docs/CONTEXT.md` (domain glossary), `docs/gotchas.md`, `docs/superpowers/` (specs and plans).
 
 ## Commands
 
@@ -97,3 +97,7 @@ More, rarer ones in `docs/gotchas.md`.
 - Never push, merge, or commit to `main` without an explicit request. Commit format: `type(scope): description`.
 - Never modify `.env*` files. `infra/.env.example` is the only template.
 - Code comments, docs and PR text are in English; talk to the user in their language.
+- Non-trivial change: design, then plan, then implementation, with the user's approval in between.
+- Tests mirror the code layout: `backend/tests/<module>/` for `backend/app/<module>/`; frontend unit tests sit next to the code (`*.test.ts`), route tests in `src/test/routes/`, mocks aliased in `vitest.config.ts`.
+- Import `formatCurrency` from `$lib/core/currency`; never redefine it. Every fetch uses `credentials: 'include'`.
+- Game icons are never committed; they live in the icon cache volume.
