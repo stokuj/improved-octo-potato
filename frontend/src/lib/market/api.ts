@@ -2,10 +2,9 @@
 import { API_BASE_URL } from '$lib/core/config.js';
 import type {
 	ImportFileResult,
-	ListingRead,
+	ListingsRead,
 	MarketDayRead,
-	MarketItemRead,
-	SummaryRow
+	MarketItemRead
 } from '$lib/core/types';
 
 export class ApiError extends Error {
@@ -31,12 +30,8 @@ export function fetchDays(itemId: number, days = 14): Promise<MarketDayRead[]> {
 	return getJson(`/market/items/${itemId}/days?days=${days}`);
 }
 
-export function fetchListings(itemId: number): Promise<ListingRead[]> {
+export function fetchListings(itemId: number): Promise<ListingsRead> {
 	return getJson(`/market/items/${itemId}/listings`);
-}
-
-export function fetchSummary(): Promise<SummaryRow[]> {
-	return getJson('/market/summary');
 }
 
 export async function uploadFiles(files: File[]): Promise<ImportFileResult[]> {
