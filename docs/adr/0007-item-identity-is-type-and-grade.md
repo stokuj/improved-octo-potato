@@ -13,6 +13,7 @@ For materials one item type has one grade: Arcane and Heroic Erenor Weapon Infus
 - On `/market` the tree shows one node per item type. A Grade select switches between that type's items.
 - ArcheMarket records market days only for the grade it searched. The other grades of a type show listings but an empty chart.
 - Category falls back, at read time, to the category of a sibling grade of the same item type. The item base never stores a category that no file stated.
+- Until the item base lands, `UNIQUE(name)` remains (PR 1 builds only the V2 headers and the market page), so two grades of one name in one file are a row error.
 - A listing without item type and grade can only be matched by name, and only when that name is unique (see [ADR-0009](0009-file-imports-are-connectors.md)).
 
 ## Considered options

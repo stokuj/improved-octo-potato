@@ -9,7 +9,7 @@
 
 	use([LineChart, BarChart, GridComponent, LegendComponent, TooltipComponent, SVGRenderer]);
 
-	let { days, height = 380 }: { days: MarketDayRead[]; height?: number } = $props();
+	let { days }: { days: MarketDayRead[] } = $props();
 
 	let el: HTMLDivElement;
 	let chart: ECharts | undefined;
@@ -20,13 +20,14 @@
 	});
 
 	onMount(() => {
-		const onResize = () => chart?.resize();
-		window.addEventListener('resize', onResize);
+		// The box keeps its aspect ratio, so a wider column makes the chart taller.
+		const observer = new ResizeObserver(() => chart?.resize());
+		observer.observe(el);
 		return () => {
-			window.removeEventListener('resize', onResize);
+			observer.disconnect();
 			chart?.dispose();
 		};
 	});
 </script>
 
-<div bind:this={el} class="w-full" style="height: {height}px;" data-testid="market-chart"></div>
+<div bind:this={el} class="w-full" style="aspect-ratio: 25 / 14" data-testid="market-chart"></div>

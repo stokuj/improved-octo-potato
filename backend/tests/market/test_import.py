@@ -2,6 +2,7 @@ import csv
 import io
 import random
 import uuid
+from collections.abc import Callable
 from datetime import date
 from pathlib import Path
 
@@ -9,7 +10,12 @@ from httpx import AsyncClient
 from sqlmodel import col, select
 
 from app.market import services
-from app.market.csv_format import LISTINGS_HEADER, MARKET_HEADER
+from app.market.csv_format import (
+    LISTINGS_HEADER,
+    LISTINGS_HEADER_V2,
+    MARKET_HEADER,
+    MARKET_HEADER_V2,
+)
 from app.market.models import Item, MarketDay
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -32,6 +38,18 @@ def rewrite_fixture(name: str, suffix: str, base: int) -> bytes:
             r[i_type] = str(base + int(r[i_type]))
     out = io.StringIO()
     csv.writer(out, lineterminator="\n").writerows([header, *body])
+    return out.getvalue().encode()
+
+
+def to_v2(data: bytes, extra: Callable[[dict], list[str]]) -> bytes:
+    """Append V2 columns: extra(row_as_dict) returns the new cell values."""
+    rows = list(csv.reader(io.StringIO(data.decode())))
+    header = ",".join(rows[0])
+    v2 = {LISTINGS_HEADER: LISTINGS_HEADER_V2, MARKET_HEADER: MARKET_HEADER_V2}[header]
+    out = io.StringIO()
+    w = csv.writer(out, lineterminator="\n")
+    w.writerow(v2.split(","))
+    w.writerows(r + extra(dict(zip(rows[0], r))) for r in rows[1:])
     return out.getvalue().encode()
 
 
@@ -260,3 +278,95 @@ async def test_db_error_in_one_file_does_not_block_the_next(
     assert res[0]["errors"][0]["reason"].startswith("database error")
     assert_sum(res[0])
     assert counts(res[1]) == ("listings", 250, 250, 0, 0, 0)
+
+
+async def _category(session, name: str) -> str | None:
+    return (await session.exec(select(Item.category).where(Item.name == name))).one()
+
+
+async def test_v2_market_sets_category(superuser_client: AsyncClient, session) -> None:
+    s, base = uuid.uuid4().hex[:8], _base()
+    data = to_v2(rewrite_fixture("market.csv", s, base), lambda r: ["Hide"])
+    [r] = await upload(superuser_client, ("market.csv", data))
+    assert_sum(r)
+    assert counts(r) == ("market", 406, 140, 0, 266, 0)
+    assert await _category(session, f"Leather {s}") == "Hide"
+
+
+async def test_v2_market_empty_category_keeps_stored(
+    superuser_client: AsyncClient, session
+) -> None:
+    s, base = uuid.uuid4().hex[:8], _base()
+    m = rewrite_fixture("market.csv", s, base)
+    await upload(superuser_client, ("a.csv", to_v2(m, lambda r: ["Hide"])))
+    [r] = await upload(superuser_client, ("b.csv", to_v2(m, lambda r: [""])))
+    assert_sum(r)
+    assert await _category(session, f"Leather {s}") == "Hide"
+
+
+def _v2_offers(name: str, t: int, grades: list[int]) -> bytes:
+    rows = [
+        f"1792607894,1792607894,{name},ok,{rank},100,1000,10,{t},{g}"
+        for rank, g in enumerate(grades, 1)
+    ]
+    return ("\n".join([LISTINGS_HEADER_V2, *rows]) + "\n").encode()
+
+
+async def test_v2_listings_resolve_by_type_and_grade(
+    superuser_client: AsyncClient, session
+) -> None:
+    name, t = f"Keyed {uuid.uuid4().hex[:8]}", _base() + 16327
+    [r] = await upload(superuser_client, ("l.csv", _v2_offers(name, t, [0, 0])))
+    assert counts(r) == ("listings", 2, 2, 0, 0, 0)
+    item = (await session.exec(select(Item).where(Item.name == name))).one()
+    assert (item.item_type, item.item_grade) == (t, 0)
+
+
+async def test_v2_listings_two_grades_of_one_name(
+    superuser_client: AsyncClient,
+) -> None:
+    name, t = f"Graded {uuid.uuid4().hex[:8]}", _base()
+    [r] = await upload(superuser_client, ("l.csv", _v2_offers(name, t, [0, 0, 2])))
+    assert_sum(r)
+    assert [e["reason"] for e in r["errors"]] == [services.GRADE_CONFLICT]
+    assert r["inserted"] == 2
+
+
+async def test_v1_listings_after_v2_market_match_by_name(
+    superuser_client: AsyncClient,
+) -> None:
+    s, base = uuid.uuid4().hex[:8], _base()
+    m = to_v2(rewrite_fixture("market.csv", s, base), lambda r: ["Hide"])
+    li = rewrite_fixture("listings.csv", s, base)
+    res = await upload(superuser_client, ("market.csv", m), ("listings.csv", li))
+    assert counts(res[0]) == ("market", 406, 140, 0, 266, 0)
+    assert counts(res[1]) == ("listings", 250, 250, 0, 0, 0)
+
+
+async def test_v2_listings_keep_the_stored_grade_when_rank_1_differs(
+    superuser_client: AsyncClient,
+) -> None:
+    name, t = f"Flip {uuid.uuid4().hex[:8]}", _base()
+    await upload(superuser_client, ("a.csv", _v2_offers(name, t, [0, 0])))
+    later = _v2_offers(name, t, [2, 0, 0]).replace(b"1792607894", b"1792607954")
+    [r] = await upload(superuser_client, ("b.csv", later))
+    assert_sum(r)
+    assert (r["inserted"], [e["line"] for e in r["errors"]]) == (2, [2])
+    assert r["errors"][0]["reason"] == services.GRADE_CONFLICT
+
+
+async def test_market_keeps_the_stored_grade_when_the_first_scan_differs(
+    superuser_client: AsyncClient,
+) -> None:
+    name, t = f"Flip {uuid.uuid4().hex[:8]}", _base()
+
+    def row(scan: int, grade: int) -> str:
+        return f"{scan},{scan},{name},{t},{grade},ok,14,1,1,1,1,1"
+
+    await upload(
+        superuser_client, ("a.csv", f"{MARKET_HEADER}\n{row(1792607894, 0)}\n".encode())
+    )
+    data = f"{MARKET_HEADER}\n{row(1792694294, 2)}\n{row(1792780694, 0)}\n".encode()
+    [r] = await upload(superuser_client, ("b.csv", data))
+    assert_sum(r)
+    assert (r["inserted"], [e["line"] for e in r["errors"]]) == (1, [2])

@@ -6,7 +6,7 @@ Problems hit while building this app that the code does not explain by itself. T
 
 - `ON CONFLICT DO UPDATE` refuses to touch the same row twice in one statement. That is why market days are deduplicated in memory before the upsert, not just for speed.
 - Inserts and updates are told apart with `RETURNING (xmax = 0)`: a fresh row has `xmax = 0`.
-- The game's `weekly_avg` includes the day itself, so today's partial day leaks into it. The 7-day average in `/summary` is the `weekly_avg` of the day before today.
+- The game's `weekly_avg` includes the day itself, so today's partial day leaks into it. The Prices chart plots it as is, so the tooltip marks the last day `(today, partial)`.
 
 ## ArcheBag files
 

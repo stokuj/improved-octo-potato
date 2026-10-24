@@ -5,7 +5,9 @@ import pytest
 
 from app.market.csv_format import (
     LISTINGS_HEADER,
+    LISTINGS_HEADER_V2,
     MARKET_HEADER,
+    MARKET_HEADER_V2,
     CsvFormatError,
     game_day,
     parse_csv,
@@ -119,3 +121,54 @@ def test_oversized_field_is_file_error() -> None:
     data = f'{LISTINGS_HEADER}\n1,1,"{"x" * 200_000}",ok,1,10,10,1\n'.encode()
     with pytest.raises(CsvFormatError, match="malformed CSV"):
         parse_csv(data)
+
+
+def test_listings_v2_reads_type_and_grade() -> None:
+    data = (
+        LISTINGS_HEADER_V2 + "\n1,1,Leather,ok,1,4650,2418000,520,16327,0\n"
+        "1,1,Leather,no_result,0,,,,,\n"
+    ).encode()
+    p = parse_csv(data)
+    assert p.kind == "listings" and not p.errors
+    assert (p.listings[0].item_type, p.listings[0].item_grade) == (16327, 0)
+    assert (p.listings[1].item_type, p.listings[1].item_grade) == (None, None)
+
+
+@pytest.mark.parametrize("tail", ["16327,", ",0"])
+def test_listings_v2_half_key_is_row_error(tail: str) -> None:
+    p = parse_csv(
+        f"{LISTINGS_HEADER_V2}\n1,1,Leather,ok,1,4650,2418000,520,{tail}\n".encode()
+    )
+    assert [e.reason for e in p.errors] == [
+        "item_type and item_grade must both be set or both empty"
+    ]
+
+
+def test_listings_v2_status_row_with_key_is_row_error() -> None:
+    p = parse_csv(
+        f"{LISTINGS_HEADER_V2}\n1,1,Leather,no_result,0,,,,16327,0\n".encode()
+    )
+    assert [e.reason for e in p.errors] == [
+        "no_result row needs empty item_type and item_grade"
+    ]
+
+
+def test_market_v2_reads_category_and_empty_is_none() -> None:
+    rows = "\n".join(
+        f"1792607894,1792607894,Leather,16327,0,ok,{d},4702,4877,2100,19999,1000,{c}"
+        for d, c in ((14, "Hide"), (13, ""))
+    )
+    p = parse_csv(f"{MARKET_HEADER_V2}\n{rows}\n".encode())
+    assert [m.category for m in p.market] == ["Hide", None]
+
+
+def test_market_v2_category_too_long_is_row_error() -> None:
+    p = parse_csv(
+        f"{MARKET_HEADER_V2}\n1,1,Leather,16327,0,ok,14,1,1,1,1,1,{'x' * 65}\n".encode()
+    )
+    assert [e.reason for e in p.errors] == ["category longer than 64"]
+
+
+def test_v1_headers_still_parse() -> None:  # the sample fixtures are V1
+    assert parse_csv((FIXTURES / "listings.csv").read_bytes()).kind == "listings"
+    assert parse_csv((FIXTURES / "market.csv").read_bytes()).kind == "market"

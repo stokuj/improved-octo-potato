@@ -9,6 +9,10 @@ LISTINGS_HEADER = (
     "scan_id,captured_at,item,status,rank,unit_price_copper,listing_price_copper,stack"
 )
 MARKET_HEADER = "scan_id,captured_at,item,item_type,item_grade,status,day,daily_avg_copper,weekly_avg_copper,min_copper,max_copper,volume"
+# ArcheMarket 7e: offers carry the item key, market rows the game's category.
+LISTINGS_HEADER_V2 = LISTINGS_HEADER + ",item_type,item_grade"
+MARKET_HEADER_V2 = MARKET_HEADER + ",category"
+CATEGORY_MAX = 64
 GAME_TZ = timezone(timedelta(hours=3), "MSK")  # ArcheRage server clock (Moscow, no DST)
 
 Kind = Literal["listings", "market"]
@@ -38,6 +42,8 @@ class ListingRow:
     unit_price: int | None
     listing_price: int | None
     stack: int | None
+    item_type: int | None = None
+    item_grade: int | None = None
 
 
 @dataclass(frozen=True)
@@ -54,6 +60,7 @@ class MarketRow:
     min: int
     max: int
     volume: int
+    category: str | None = None
 
 
 @dataclass
@@ -95,7 +102,10 @@ def _ts(value: str) -> datetime:
 
 
 def _listing(line: int, r: list[str]) -> ListingRow:
-    scan_id, captured_at, item, status, rank, unit, listing, stack = r
+    scan_id, captured_at, item, status, rank, unit, listing, stack = r[:8]
+    item_type, item_grade = r[8:] or ("", "")
+    if (item_type == "") != (item_grade == ""):
+        raise _RowInvalid("item_type and item_grade must both be set or both empty")
     rank_n = _int(rank, "rank")
     prices = (unit, listing, stack)
     if status == "ok":
@@ -111,6 +121,8 @@ def _listing(line: int, r: list[str]) -> ListingRow:
     elif status in LISTING_NON_OK:
         if rank_n != 0 or any(v != "" for v in prices):
             raise _RowInvalid(f"{status} row needs rank 0 and empty prices")
+        if item_type != "":
+            raise _RowInvalid(f"{status} row needs empty item_type and item_grade")
         unit_n = listing_n = stack_n = None
     else:
         raise _RowInvalid(f"unknown status {status!r}")
@@ -126,12 +138,17 @@ def _listing(line: int, r: list[str]) -> ListingRow:
         unit_n,
         listing_n,
         stack_n,
+        _int(item_type, "item_type") if item_type else None,
+        _int(item_grade, "item_grade") if item_grade else None,
     )
 
 
 def _market(line: int, r: list[str]) -> MarketRow | None:
     """Returns None for a valid no_answer/error line (counted as skipped)."""
-    scan_id, captured_at, item, item_type, item_grade, status, day, *values = r
+    scan_id, captured_at, item, item_type, item_grade, status, day, *values = r[:12]
+    category = r[12] if len(r) > 12 else ""
+    if len(category) > CATEGORY_MAX:
+        raise _RowInvalid(f"category longer than {CATEGORY_MAX}")
     day_n = _int(day, "day")
     if status in MARKET_NON_OK:
         if day_n != 0 or any(v != "" for v in values):
@@ -165,6 +182,7 @@ def _market(line: int, r: list[str]) -> MarketRow | None:
         lo,
         hi,
         volume,
+        category or None,
     )
 
 
@@ -184,10 +202,10 @@ def parse_csv(data: bytes) -> ParsedFile:
 def _read(text: str) -> ParsedFile:
     reader = csv.reader(io.StringIO(text, newline=""))
     header = ",".join(next(reader, []))
-    if header == LISTINGS_HEADER:
-        parsed, width = ParsedFile("listings"), 8
-    elif header == MARKET_HEADER:
-        parsed, width = ParsedFile("market"), 12
+    if header in (LISTINGS_HEADER, LISTINGS_HEADER_V2):
+        parsed, width = ParsedFile("listings"), 8 if header == LISTINGS_HEADER else 10
+    elif header in (MARKET_HEADER, MARKET_HEADER_V2):
+        parsed, width = ParsedFile("market"), 12 if header == MARKET_HEADER else 13
     else:
         raise CsvFormatError("unknown header")
 

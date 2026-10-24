@@ -18,6 +18,8 @@ class Item(SQLModel, table=True):
     item_type: int | None = None
     item_grade: int | None = None
     name: str = Field(max_length=120)
+    # The game's category from market.csv (ArcheMarket 7e); NULL until one arrives.
+    category: str | None = Field(default=None, max_length=64)
     created_at: datetime = Field(default_factory=utcnow)
 
 
