@@ -1,4 +1,4 @@
-from sqlalchemy import func, literal_column, text, tuple_
+from sqlalchemy import func, literal_column, text, tuple_, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import col, select
@@ -157,6 +157,16 @@ async def _import_market(
         flags = (await session.exec(stmt)).scalars().all()  # type: ignore[call-overload]
         inserted += sum(flags)
         updated += len(flags) - sum(flags)
+    newest: dict[int, MarketRow] = {}  # item id -> its newest row with a category
+    for (item_id, _), r in best.items():
+        if r.category and (
+            item_id not in newest or r.captured_at > newest[item_id].captured_at
+        ):
+            newest[item_id] = r
+    for item_id, r in newest.items():
+        await session.exec(  # type: ignore[call-overload]
+            update(Item).where(col(Item.id) == item_id).values(category=r.category)
+        )
     skipped = parsed.skipped + valid - inserted - updated
     return inserted, updated, skipped
 
@@ -164,11 +174,20 @@ async def _import_market(
 async def _import_listings(
     session: AsyncSession, parsed: ParsedFile, errors: list[RowError]
 ) -> tuple[int, int, int]:
-    ids, bad = await resolve_items(session, {}, {r.item for r in parsed.listings})
+    keys: dict[str, tuple[int, int]] = {}
+    for r in parsed.listings:
+        if r.item_type is not None and r.item_grade is not None:
+            keys.setdefault(r.item, (r.item_type, r.item_grade))
+    names = {r.item for r in parsed.listings if r.item_type is None}
+    ids, bad = await resolve_items(session, keys, names)
     rows: list[ListingRow] = []
     for r in parsed.listings:
-        if r.item in bad:
-            errors.append(RowError(r.line, bad[r.item]))
+        reason = bad.get(r.item)
+        if reason is None and r.item_type is not None:
+            if keys[r.item] != (r.item_type, r.item_grade):
+                reason = GRADE_CONFLICT  # same name, second grade within one file
+        if reason is not None:
+            errors.append(RowError(r.line, reason))
         else:
             rows.append(r)
     values = [
