@@ -2,12 +2,12 @@
 	import { onMount } from 'svelte';
 	import { init, use, type ECharts } from 'echarts/core';
 	import { BarChart, LineChart } from 'echarts/charts';
-	import { GridComponent, LegendComponent, MarkAreaComponent, TooltipComponent } from 'echarts/components';
+	import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
 	import { SVGRenderer } from 'echarts/renderers';
 	import type { MarketDayRead } from '$lib/core/types';
 	import { buildChartOptions } from './chart';
 
-	use([LineChart, BarChart, GridComponent, LegendComponent, MarkAreaComponent, TooltipComponent, SVGRenderer]);
+	use([LineChart, BarChart, GridComponent, LegendComponent, TooltipComponent, SVGRenderer]);
 
 	let { days }: { days: MarketDayRead[] } = $props();
 

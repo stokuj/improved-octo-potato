@@ -3,6 +3,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { provideUserState, checkMe, logout } from '$lib/core/auth.svelte.js';
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 
 	const user = provideUserState();
 
@@ -78,7 +79,8 @@
 
 	<!-- Main Content -->
 	<!-- overflow-x-clip: hidden tooltips are still laid out and must not widen the page. -->
-	<main class="container mx-auto my-6 p-4 sm:p-6 flex-1 overflow-x-clip bg-base-100 rounded-box shadow-lg">
+	<!-- /market fills the screen like the in-game Auction House; other pages keep the container. -->
+	<main class="{page.url.pathname.startsWith('/market') ? 'mx-4 sm:mx-6' : 'container mx-auto'} my-6 p-4 sm:p-6 flex-1 overflow-x-clip bg-base-100 rounded-box shadow-lg">
 		{#if user.loading && !user.isLoggedIn}
 			<div class="flex justify-center items-center h-64">
 				<span class="loading loading-ring loading-lg text-primary"></span>

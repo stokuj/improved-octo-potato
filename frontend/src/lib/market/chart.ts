@@ -27,15 +27,24 @@ export function buildChartOptions(days: MarketDayRead[]): EChartsOption {
 	const dates = days.map((d) => d.day);
 	const n = dates.length;
 	const shown = new Set([0, Math.floor((n - 1) / 2), n - 1]);
-	const today = dates.at(-1);
-	const markArea = today
-		? { silent: true, itemStyle: { color: TODAY_SHADE }, data: [[{ xAxis: today }, { xAxis: today }]] }
-		: undefined;
 	const priceMax = Math.ceil(1.2 * Math.max(0, ...days.flatMap((d) => [d.daily_avg, d.weekly_avg]))) || 1;
 	const volumeMax = Math.max(0, ...days.map((d) => d.volume)) || 1;
 	const grid = { show: true, backgroundColor: BOX, borderColor: GRID_LINE, left: 12, right: 92 };
 	const splitLine = { show: true, interval: 0, lineStyle: { color: GRID_LINE } };
 	const axisLabel = { color: INK, fontSize: 12 };
+	// Today's column: a full-band bar on a hidden axis, under the data (a markArea from today to today has no width).
+	const shade = (axis: number, max: number) => ({
+		name: 'Today',
+		type: 'bar' as const,
+		xAxisIndex: axis + 2,
+		yAxisIndex: axis,
+		data: days.map((_, i) => (i === n - 1 ? max : null)),
+		barWidth: '100%',
+		itemStyle: { color: TODAY_SHADE },
+		silent: true,
+		z: 1,
+		tooltip: { show: false }
+	});
 	const yAxis = (gridIndex: number, max: number, steps: number, formatter: (v: number) => string) => ({
 		type: 'value' as const,
 		gridIndex,
@@ -88,7 +97,9 @@ export function buildChartOptions(days: MarketDayRead[]): EChartsOption {
 					color: (_v?: string | number, i?: number) => (i === n - 1 ? TODAY_LABEL : INK)
 				}
 			},
-			{ type: 'category', gridIndex: 1, data: dates, axisTick: { show: false }, axisLabel: { show: false }, splitLine }
+			{ type: 'category', gridIndex: 1, data: dates, axisTick: { show: false }, axisLabel: { show: false }, splitLine },
+			{ type: 'category', gridIndex: 0, data: dates, show: false },
+			{ type: 'category', gridIndex: 1, data: dates, show: false }
 		],
 		yAxis: [
 			yAxis(0, priceMax, 5, (v) => formatCurrency(v)),
@@ -103,8 +114,7 @@ export function buildChartOptions(days: MarketDayRead[]): EChartsOption {
 				data: days.map((d) => d.weekly_avg),
 				lineStyle: { width: 3.5, color: WEEKLY_COLOR },
 				itemStyle: { color: WEEKLY_COLOR },
-				showSymbol: false,
-				markArea
+				showSymbol: false
 			},
 			{
 				name: 'Same-day averages',
@@ -123,9 +133,10 @@ export function buildChartOptions(days: MarketDayRead[]): EChartsOption {
 				yAxisIndex: 1,
 				data: days.map((d) => d.volume),
 				itemStyle: { color: VOLUME_COLOR },
-				barWidth: '56%',
-				markArea
-			}
+				barWidth: '56%'
+			},
+			shade(0, priceMax),
+			shade(1, volumeMax)
 		]
 	};
 }

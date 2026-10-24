@@ -17,11 +17,10 @@ type Series = {
 	showSymbol?: boolean;
 	lineStyle?: { width: number; color: string };
 	itemStyle?: { color: string };
-	markArea?: { data: [{ xAxis: string }, { xAxis: string }][] };
 };
 type Axis = { position?: string; min: number; max: number; interval: number };
 
-const series = () => buildChartOptions(days).series as Series[];
+const series = () => (buildChartOptions(days).series as Series[]).filter((s) => s.name !== 'Today');
 
 describe('buildChartOptions', () => {
 	it('names, colours and widths follow the game', () => {
@@ -56,8 +55,15 @@ describe('buildChartOptions', () => {
 	});
 
 	it('shades today in both panels', () => {
-		const s = series();
-		for (const i of [0, 2]) expect(s[i].markArea?.data).toEqual([[{ xAxis: '2026-10-21' }, { xAxis: '2026-10-21' }]]);
+		// A full-band bar on a hidden axis per panel; a markArea from today to today has no width.
+		const o = buildChartOptions(days);
+		const xAxis = o.xAxis as { gridIndex: number; show?: boolean }[];
+		const shades = (o.series as (Series & { xAxisIndex: number; yAxisIndex: number; data: (number | null)[]; barWidth: string })[]).filter((s) => s.name === 'Today');
+		expect(shades.map((s) => [xAxis[s.xAxisIndex].gridIndex, xAxis[s.xAxisIndex].show, s.barWidth, s.itemStyle?.color])).toEqual([
+			[0, false, '100%', 'rgba(120,180,160,.18)'],
+			[1, false, '100%', 'rgba(120,180,160,.18)']
+		]);
+		expect(shades.map((s) => [s.data.slice(0, -1).every((v) => v == null), s.data.at(-1)])).toEqual([[true, 1200], [true, 300]]);
 	});
 
 	it('tooltip marks today as partial', () => {
