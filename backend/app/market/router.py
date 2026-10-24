@@ -3,12 +3,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.db import get_async_session
 from app.market import services
-from app.market.schemas import (
-    ListingRead,
-    MarketDayRead,
-    MarketItemRead,
-    SummaryRow,
-)
+from app.market.schemas import ListingsRead, MarketDayRead, MarketItemRead
 
 router = APIRouter(prefix="/market", tags=["market"])
 
@@ -29,15 +24,8 @@ async def read_days(
     return await services.get_days(session, item_id, days)
 
 
-@router.get("/items/{item_id}/listings", response_model=list[ListingRead])
+@router.get("/items/{item_id}/listings", response_model=ListingsRead)
 async def read_listings(
     item_id: int, session: AsyncSession = Depends(get_async_session)
-) -> list[ListingRead]:
+) -> ListingsRead:
     return await services.get_latest_listings(session, item_id)
-
-
-@router.get("/summary", response_model=list[SummaryRow])
-async def read_summary(
-    session: AsyncSession = Depends(get_async_session),
-) -> list[SummaryRow]:
-    return await services.get_summary(session)

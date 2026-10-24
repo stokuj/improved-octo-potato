@@ -1,3 +1,5 @@
+import math
+
 from sqlalchemy import func, literal_column, text, tuple_, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
@@ -17,9 +19,9 @@ from app.market.models import Item, Listing, MarketDay
 from app.imports.schemas import ImportFileResult, ImportRowError, failed
 from app.market.schemas import (
     ListingRead,
+    ListingsRead,
     MarketDayRead,
     MarketItemRead,
-    SummaryRow,
 )
 
 MAX_FILE_BYTES = 50 * 1024 * 1024
@@ -27,6 +29,13 @@ MAX_ERRORS = 100
 CHUNK_ROWS = 2_000  # 9 columns x 2000 stays under asyncpg's 32767 bind params
 NAME_MAX = 120
 GRADE_CONFLICT = "name already used by another grade"
+MIN_REAL_STACK = 10
+REAL_STACK_SHARE = 0.002  # of the average daily volume, a fraction
+
+
+def min_stack(avg_volume: float | None) -> int:
+    """Smallest stack that counts as a real offer; smaller ones are likely bait."""
+    return max(MIN_REAL_STACK, math.ceil((avg_volume or 0) * REAL_STACK_SHARE))
 
 
 async def resolve_items(
@@ -258,27 +267,54 @@ async def _get_item(session: AsyncSession, item_id: int) -> Item:
     return item
 
 
+# Mean volume of the 7 days before each item's last market day.
+_VOL_CTE = """
+    last_day AS (SELECT item_id, max(day) AS day FROM market_day GROUP BY item_id),
+    vol AS (
+        SELECT d.item_id, avg(m.volume) AS avg_volume
+        FROM last_day d
+        JOIN market_day m
+          ON m.item_id = d.item_id AND m.day BETWEEN d.day - 7 AND d.day - 1
+        GROUP BY d.item_id
+    )
+"""
+
+_ITEMS_SQL = text(
+    f"""
+    WITH {_VOL_CTE},
+    latest AS (SELECT item_id, max(scan_id) AS scan_id FROM listing GROUP BY item_id),
+    tracked AS (SELECT item_id FROM last_day UNION SELECT item_id FROM latest)
+    SELECT i.id, i.name, i.item_type, i.item_grade, i.category,
+           d.day AS last_day, v.avg_volume, max(l.captured_at) AS scan_at,
+           min(l.unit_price) FILTER (
+             WHERE l.status = 'ok'
+               AND l.stack >= greatest(:floor, ceil(coalesce(v.avg_volume, 0) * :share))
+           ) AS cheapest_real
+    FROM tracked t
+    JOIN item i ON i.id = t.item_id
+    LEFT JOIN last_day d ON d.item_id = i.id
+    LEFT JOIN vol v ON v.item_id = i.id
+    LEFT JOIN latest s ON s.item_id = i.id
+    LEFT JOIN listing l ON l.item_id = i.id AND l.scan_id = s.scan_id
+    GROUP BY i.id, d.day, v.avg_volume
+    ORDER BY i.name
+    """
+)
+
+_ITEM_VOL_SQL = text(f"WITH {_VOL_CTE} SELECT avg_volume FROM vol WHERE item_id = :id")
+
+
 async def list_items(session: AsyncSession) -> list[MarketItemRead]:
-    last_day = (
-        select(func.max(MarketDay.day))
-        .where(MarketDay.item_id == Item.id)
-        .scalar_subquery()
-    )
-    has_data = select(MarketDay.item_id).where(
-        MarketDay.item_id == Item.id
-    ).exists() | (select(Listing.item_id).where(Listing.item_id == Item.id).exists())
-    rows = await session.exec(
-        select(Item, last_day).where(has_data).order_by(Item.name)  # type: ignore[call-overload]
-    )
+    params = {"floor": MIN_REAL_STACK, "share": REAL_STACK_SHARE}
+    rows = (await session.exec(_ITEMS_SQL, params=params)).mappings().all()  # type: ignore[call-overload]
     return [
         MarketItemRead(
-            id=i.id,
-            name=i.name,
-            item_type=i.item_type,
-            item_grade=i.item_grade,
-            last_day=d,
+            **{k: v for k, v in r.items() if k != "avg_volume"},
+            min_stack=min_stack(
+                float(r["avg_volume"]) if r["avg_volume"] is not None else None
+            ),
         )
-        for i, d in rows.all()
+        for r in rows
     ]
 
 
@@ -298,49 +334,31 @@ async def get_days(
     ]
 
 
-async def get_latest_listings(session: AsyncSession, item_id: int) -> list[ListingRead]:
+async def get_latest_listings(session: AsyncSession, item_id: int) -> ListingsRead:
     await _get_item(session, item_id)
     newest = (
         select(func.max(Listing.scan_id))
         .where(Listing.item_id == item_id)
         .scalar_subquery()
     )
-    rows = await session.exec(
-        select(Listing)
-        .where(Listing.item_id == item_id, Listing.scan_id == newest)
-        .order_by(Listing.rank)
-    )
-    return [ListingRead.model_validate(r, from_attributes=True) for r in rows.all()]
-
-
-_SUMMARY_SQL = text(
-    """
-    WITH latest AS (
-        SELECT item_id, max(day) AS day FROM market_day GROUP BY item_id
-    )
-    SELECT i.id AS item_id, i.name, l.day,
-           t.daily_avg AS today_avg, t.volume AS sold_today,
-           p.weekly_avg AS avg_7d,
-           (SELECT avg(w.volume) FROM market_day w
-             WHERE w.item_id = l.item_id
-               AND w.day BETWEEN l.day - 7 AND l.day - 1) AS avg_daily_volume
-    FROM latest l
-    JOIN item i ON i.id = l.item_id
-    JOIN market_day t ON t.item_id = l.item_id AND t.day = l.day
-    LEFT JOIN market_day p ON p.item_id = l.item_id AND p.day = l.day - 1
-    ORDER BY i.name
-    """
-)
-
-
-async def get_summary(session: AsyncSession) -> list[SummaryRow]:
-    rows = (await session.exec(_SUMMARY_SQL)).mappings().all()  # type: ignore[call-overload]
-    return [
-        SummaryRow(
-            **r,
-            change_pct=round((r["today_avg"] - r["avg_7d"]) / r["avg_7d"], 4)
-            if r["avg_7d"]
-            else None,
+    rows = (
+        await session.exec(
+            select(Listing)
+            .where(Listing.item_id == item_id, Listing.scan_id == newest)
+            .order_by(Listing.rank)
         )
-        for r in rows
-    ]
+    ).all()
+    avg = (await session.exec(_ITEM_VOL_SQL, params={"id": item_id})).scalar()  # type: ignore[call-overload]
+    floor = min_stack(float(avg) if avg is not None else None)
+    return ListingsRead(
+        scan_id=rows[0].scan_id if rows else None,
+        captured_at=rows[0].captured_at if rows else None,
+        min_stack=floor,
+        listings=[
+            ListingRead(
+                **r.model_dump(exclude={"item_id"}),
+                tiny=r.status == "ok" and r.stack is not None and r.stack < floor,
+            )
+            for r in rows
+        ],
+    )
