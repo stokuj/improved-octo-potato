@@ -1,6 +1,6 @@
 # Two logging layers: technical JSON lines and a business import log
 
-Status: accepted, not built yet (2026-10-23)
+Status: accepted; the technical layer is built (#24), the business import log is not yet (2026-10-24)
 
 Today logging is ad hoc: a bare `logging.getLogger` in a few places and `print` in the CLI. Nothing records who uploaded what, or why an item changed. With items created by players ([ADR-0008](0008-item-base-grows-from-uploads-with-verification.md)) we need both an operations log and a history the Admin can browse.
 

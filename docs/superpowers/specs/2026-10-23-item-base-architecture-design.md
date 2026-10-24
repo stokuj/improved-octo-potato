@@ -309,22 +309,20 @@ The tree has one node per item type. The Grade select switches between that type
 
 ## Build order
 
-Each step is one branch and one PR, and each leaves the app working and CI green. Plans are written per step, after the previous step merges.
+Each step is one branch and one PR, and each leaves the app working and CI green. Plans are written per step, after the previous step merges. Technical logging (ADR-0010, technical layer) is already done in #24.
 
-1. **Technical logging:** `core/logging.py`, the middleware, `--no-access-log`, and the switch of the current loggers. Builds ADR-0010, technical layer.
-2. **Connectors, same behaviour:** move both `csv_format.py` files and the import halves of the services into `imports/`, and move `GAME_TZ` to `core/time.py`. Today's import tests must pass with behaviour unchanged. Builds ADR-0009 and ADR-0012.
-3. **Item base:**
+1. **ArcheMarket 7e headers + `/market` option A:** the V2 headers next to V1, `item.category`, the reads for option A and the page. `UNIQUE(name)` stays, so two grades of one name are still a row error.
+2. **Item base:**
+   - connectors: both `csv_format.py` files and the import halves of the services move into `imports/`, and `GAME_TZ` moves to `core/time.py` (ADR-0009, ADR-0012);
    - the fresh baseline and `items/`;
    - `resolve` with verification;
    - the uploader on market rows;
    - slots pointing at `item_id`;
    - the chest place key;
-   - `import_run` and `import_issue` with the admin views;
-   - the V2 headers.
+   - `import_run` and `import_issue` with the admin views.
 
    Then `make dev-reset`, the seed and a re-import. Builds ADR-0007, ADR-0008, ADR-0010 (business layer) and ADR-0011.
-4. **All my items:** the endpoint with a query-count test, and the page.
-5. **Market option A:** the reads and the page. This step needs the ArcheMarket 7e files.
+3. **All my items:** the endpoint with a query-count test, and the page.
 
 ## Review focus
 

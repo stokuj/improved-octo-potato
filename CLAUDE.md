@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ArcheRage Market Tracker. The user exports AH data with the ArcheMarket game addon (a separate repo) as `listings.csv` and `market.csv`, and their bag and warehouse (`inventory.csv`) and house chests (`chests.csv`) with the ArcheBag addon, and uploads them by hand on `/import`. The app stores them idempotently and shows:
-- `/market`: a 14-day chart, the cheapest current offers, and a today-vs-7-days table;
+- `/market`: a category tree, the cheapest offers with tiny stacks marked, and a game-style 14-day Prices chart;
 - `/items`: each character's bag, warehouse and bag chests, and the house chests, as game-like tile grids.
 
 Stack: FastAPI + SQLModel + PostgreSQL 16, SvelteKit 2 (Svelte 5 runes) + DaisyUI + ECharts, podman compose.
@@ -73,7 +73,7 @@ These invariants must hold:
 
 **Frontend (`frontend/src/`).**
 - `lib/core/` holds config, auth state (runes + Svelte context), `formatCurrency`, and the generated `api.d.ts` re-exported through `types.ts`.
-- `lib/market/` holds the API helpers, `chart.ts` (a pure ECharts option builder: two stacked panels sharing the date axis, no dual-axis), and the components.
+- `lib/market/` holds the API helpers, `tree.ts` (pure: category tree, short prices, grade siblings, tiles, offer sort), `chart.ts` (a pure ECharts option builder in the game's look: two stacked panels sharing the date axis, no dual-axis, fixed 25:14 aspect), and the components (`CategoryTree`, `OffersTable`, `ItemIcon`, `MarketChart`, `ImportDropzone`). `/market` fills the screen; other pages keep the layout `container`.
 - Routes: `/` → `/market`, `/market` (selected item in `?item=`), `/items` (`?character=` and `?chest=`, `All` when missing; `/inventory` redirects here), `/import` (signed in), `/auth` (Google, plus the password form when `PUBLIC_PASSWORD_LOGIN=true`), `/auth/callback`.
 - CSP `connect-src` and `img-src` allow the origin of `PUBLIC_API_URL` (`svelte.config.js`), because dev and e2e call the API cross-origin and icons come from the API.
 - `lib/inventory/` holds the inventory API helpers, `grid.ts` (tiles, tabs, chest labels, `chestOwner`), `grades.ts` and the tile, grid and `GridPanel` components.
