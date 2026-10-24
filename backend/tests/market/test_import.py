@@ -341,3 +341,32 @@ async def test_v1_listings_after_v2_market_match_by_name(
     res = await upload(superuser_client, ("market.csv", m), ("listings.csv", li))
     assert counts(res[0]) == ("market", 406, 140, 0, 266, 0)
     assert counts(res[1]) == ("listings", 250, 250, 0, 0, 0)
+
+
+async def test_v2_listings_keep_the_stored_grade_when_rank_1_differs(
+    superuser_client: AsyncClient,
+) -> None:
+    name, t = f"Flip {uuid.uuid4().hex[:8]}", _base()
+    await upload(superuser_client, ("a.csv", _v2_offers(name, t, [0, 0])))
+    later = _v2_offers(name, t, [2, 0, 0]).replace(b"1792607894", b"1792607954")
+    [r] = await upload(superuser_client, ("b.csv", later))
+    assert_sum(r)
+    assert (r["inserted"], [e["line"] for e in r["errors"]]) == (2, [2])
+    assert r["errors"][0]["reason"] == services.GRADE_CONFLICT
+
+
+async def test_market_keeps_the_stored_grade_when_the_first_scan_differs(
+    superuser_client: AsyncClient,
+) -> None:
+    name, t = f"Flip {uuid.uuid4().hex[:8]}", _base()
+
+    def row(scan: int, grade: int) -> str:
+        return f"{scan},{scan},{name},{t},{grade},ok,14,1,1,1,1,1"
+
+    await upload(
+        superuser_client, ("a.csv", f"{MARKET_HEADER}\n{row(1792607894, 0)}\n".encode())
+    )
+    data = f"{MARKET_HEADER}\n{row(1792694294, 2)}\n{row(1792780694, 0)}\n".encode()
+    [r] = await upload(superuser_client, ("b.csv", data))
+    assert_sum(r)
+    assert (r["inserted"], [e["line"] for e in r["errors"]]) == (1, [2])

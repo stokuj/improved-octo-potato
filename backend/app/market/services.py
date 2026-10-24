@@ -115,6 +115,20 @@ async def resolve_items(
     return ids, errors
 
 
+async def _stored_keys(
+    session: AsyncSession, names: set[str]
+) -> dict[str, tuple[int, int]]:
+    """The key already stored per name, so a file's first row cannot pick another grade."""
+    if not names:
+        return {}
+    rows = await session.exec(
+        select(Item.name, Item.item_type, Item.item_grade).where(
+            col(Item.name).in_(names), col(Item.item_type).is_not(None)
+        )
+    )
+    return {n: (t, g) for n, t, g in rows.all()}
+
+
 def _chunks(rows: list[dict]) -> list[list[dict]]:
     return [rows[i : i + CHUNK_ROWS] for i in range(0, len(rows), CHUNK_ROWS)]
 
@@ -122,7 +136,7 @@ def _chunks(rows: list[dict]) -> list[list[dict]]:
 async def _import_market(
     session: AsyncSession, parsed: ParsedFile, errors: list[RowError]
 ) -> tuple[int, int, int]:
-    keys: dict[str, tuple[int, int]] = {}
+    keys = await _stored_keys(session, {r.item for r in parsed.market})
     for r in parsed.market:
         keys.setdefault(r.item, (r.item_type, r.item_grade))
     ids, bad = await resolve_items(session, keys, set())
@@ -183,7 +197,8 @@ async def _import_market(
 async def _import_listings(
     session: AsyncSession, parsed: ParsedFile, errors: list[RowError]
 ) -> tuple[int, int, int]:
-    keys: dict[str, tuple[int, int]] = {}
+    keyed = {r.item for r in parsed.listings if r.item_type is not None}
+    keys = await _stored_keys(session, keyed)
     for r in parsed.listings:
         if r.item_type is not None and r.item_grade is not None:
             keys.setdefault(r.item, (r.item_type, r.item_grade))
